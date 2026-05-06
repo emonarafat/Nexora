@@ -2,7 +2,7 @@
 
 **Project Name:** Enterprise Search & Discovery System  
 **Platform:** E-commerce Marketplace  
-**Version:** 1.0  
+**Version:** 1.2  
 **Date:** 2026-05-07  
 **Status:** Draft for Review
 
@@ -20,6 +20,10 @@
 8. [User Journeys](#8-user-journeys)
 9. [Risks & Mitigation](#9-risks--mitigation)
 10. [Rollout Plan](#10-rollout-plan)
+11. [Premium Pricing Strategy](#11-premium-pricing-strategy)
+12. [Go-To-Market Strategy](#12-go-to-market-strategy)
+13. [Phase 2 Dependency Matrix](#13-phase-2-dependency-matrix)
+14. [Phase 4 Dependency Matrix](#14-phase-4-dependency-matrix)
 
 ---
 
@@ -34,7 +38,7 @@ This initiative delivers an **intelligent, scalable, and adaptive search system*
 - Learns continuously from user behavior
 - Supports business-driven ranking and merchandising strategies
 
-The system will be built in three phases, starting with an MVP that replaces the existing keyword search, followed by advanced ranking and analytics, and finally a personalization and ML layer.
+The system will be built in four phases, starting with an MVP that replaces the existing keyword search, followed by advanced ranking and analytics, a personalization and ML layer, and a premium AI-powered search experience.
 
 ---
 
@@ -48,6 +52,8 @@ The system will be built in three phases, starting with an MVP that replaces the
 | Improve Click-Through Rate (CTR) | ≥ +25% | Event tracking |
 | Reduce search-attributed bounce rate | ≥ −20% | Session analytics |
 | Maintain search latency (P95) | < 100ms | Monitoring / APM |
+| Premium search conversion uplift (Phase 4) | ≥ +35% vs Phase 3 | A/B testing dashboard |
+| Premium feature adoption | ≥ 20% of eligible users | Feature usage analytics |
 
 All targets are measured relative to the 30-day pre-launch baseline.
 
@@ -91,6 +97,13 @@ The search system was built as a commodity feature, not as a core product capabi
 | A/B testing framework for ranking | P1 |
 | Personalization layer (rule-based) | P2 |
 | Admin tools for manual ranking overrides | P2 |
+| Hybrid search (keyword + semantic + ML) | P1 (Phase 4) |
+| LLM query understanding (intent + filter extraction) | P1 (Phase 4) |
+| AI summaries and product comparison insights | P1 (Phase 4) |
+| Conversational search and smart suggestions | P1 (Phase 4) |
+| Premium AI analytics dashboard | P1 (Phase 4) |
+| RAG-powered product knowledge answers | P1 (Phase 4) |
+| AI recommendations and cross-sell bundles | P1 (Phase 4) |
 
 ### Out of Scope
 
@@ -146,9 +159,13 @@ The search system was built as a commodity feature, not as a core product capabi
 ### 6.3 Personalization
 
 **Phase 2 (Rule-based):**
-- Boost categories matching user's recent browsing history
-- Surface brands from prior purchases
-- Price range affinity from session signals
+- Valkey-backed affinity profiles (`user:affinity:{user_id_hash}`, 90-day TTL) refreshed nightly by CronJob (03:00 UTC)
+- Boost categories matching user's recent browsing history (7-day decay, weight 0.4)
+- Surface brands from prior purchases (90-day window, weight 0.35)
+- Price range affinity from session signals (24-hour window, weight 0.25)
+- Max affinity boost cap: 0.20 (prevents over-personalization)
+- Opt-out endpoint: `DELETE /api/users/me/affinity` clears Valkey profile and logs erasure
+- Anonymous users receive personalization weight = 0 (redistributed to text relevance)
 
 **Phase 3 (ML-based):**
 - Collaborative filtering for per-user ranking adjustments
@@ -168,6 +185,29 @@ The search system was built as a commodity feature, not as a core product capabi
 - A/B testing support for ranking algorithm variants
 - Weekly automated report: anomaly detection on key KPIs
 
+### 6.6 Premium AI Search (Phase 4)
+
+- Hybrid retrieval that blends keyword relevance, semantic similarity, and ML ranking
+- Embedding-based semantic understanding for intent-rich or long-tail queries
+- LLM-assisted query interpretation (intent classification, implicit filter extraction, query expansion)
+- On-demand AI product summaries and side-by-side product comparison insights
+- Multi-turn conversational search with contextual suggestions
+- Premium-only analytics for semantic quality, LLM performance, and business ROI
+
+### 6.7 RAG-Powered Product Knowledge (Phase 4)
+
+- Retrieval-Augmented Generation over trusted product sources (catalog attributes, manuals, FAQs, policies)
+- Answer generation with source grounding and citation snippets in response payload
+- Merchant-specific knowledge isolation for multi-tenant compliance
+- Fallback to deterministic search/filter experience if retrieval confidence is low
+
+### 6.8 AI Recommendations & Cross-Sell (Phase 4)
+
+- Real-time "similar items" and "frequently bought together" suggestions
+- Session-aware next-best-product recommendations driven by intent and behavior
+- Bundle suggestions that optimize relevance, margin, and stock availability
+- Explicit controls for merchants to pin, suppress, or cap recommendation categories
+
 ---
 
 ## 7. Success Metrics (KPIs)
@@ -180,6 +220,12 @@ The search system was built as a commodity feature, not as a core product capabi
 | P95 Search Latency | TBD | < 100ms | Continuous |
 | Search-attributed Bounce Rate | TBD | −20% | 30 days post-launch |
 | Zero-click queries | TBD | −15% | 30 days post-launch |
+| Premium search conversion uplift | TBD | +35% vs Phase 3 | A/B test window (min 3 weeks) |
+| LLM query understanding accuracy | TBD | ≥ 85% | Weekly validation set |
+| AI summary engagement rate | TBD | ≥ 15% of premium sessions | 30 days post-launch |
+| RAG answer helpfulness score | TBD | ≥ 4.2/5 | Weekly sampled QA review |
+| Recommendation CTR uplift | TBD | ≥ +20% vs non-AI baseline | 30 days post-launch |
+| Premium trial-to-paid conversion | TBD | ≥ 18% | Monthly cohort analysis |
 
 > **Action Required (Data Team):** Capture 30-day pre-launch baselines for all metrics before Phase 1 go-live.
 
@@ -235,6 +281,19 @@ Returning user (authenticated) searches "jacket"
   → Ranked results reflect user affinity without overriding hard relevance
 ```
 
+### Journey 5: Premium Conversational Search (Phase 4)
+
+```
+Premium user enters query "modern sofa for small apartment under $500"
+  → System classifies intent and extracts implicit filters (category=sofa, style=modern, price_max=500, size=compact)
+  → Hybrid search executes (keyword + semantic + ML)
+  → User receives ranked results plus AI suggestion chips ("gray", "compare top 2", "show summary")
+  → User opens AI summary for top results and compares two products
+  → User refines with follow-up message "prefer washable fabric"
+  → System updates context and returns narrowed results
+  → User purchases from conversational flow
+```
+
 ---
 
 ## 9. Risks & Mitigation
@@ -248,6 +307,14 @@ Returning user (authenticated) searches "jacket"
 | Ranking tuning requiring specialist | High | Medium | Document ranking weights; train search analyst; schedule weekly review cadence |
 | A/B test contamination | Low | High | Strict user-level bucketing; no cross-experiment overlap |
 | ML model degradation (Phase 3) | Low | Medium | Automated model performance monitoring; fallback to rule-based ranking |
+| LLM hallucination in summaries/comparisons | Medium | Medium | Ground generation on product attributes only; add fallback to structured specs |
+| Premium AI latency/cost spikes | Medium | High | Caching, adaptive routing, self-hosted model baseline, API fallback guardrails |
+| Semantic mismatch on niche catalog terms | Medium | Medium | Domain synonym tuning, embedding evaluation set, weekly error review |
+| Incorrect RAG answers due to stale knowledge | Medium | High | Source freshness SLAs, retrieval confidence thresholds, citation requirement |
+| Recommendation bias toward low-margin inventory | Medium | Medium | Multi-objective ranking constraints including margin and stock rules |
+| Premium pricing resistance in SMB segment | Medium | Medium | Tiered packaging, trial period, ROI calculator in onboarding |
+| GDPR erasure requests for behavioral signals | Medium | High | Erasure endpoint `DELETE /api/users/me/data`, `data_erasure_log` audit table, 30-day compliance SLA |
+| Feature flag misconfiguration causing ranking regression | Low | High | Canary rollout (10%→25%→50%→100%), rollback trigger if CTR regression > 10%, automated flag-off in < 2 min |
 
 ---
 
@@ -271,7 +338,7 @@ Returning user (authenticated) searches "jacket"
 
 ### Phase 2 — Advanced Ranking + Analytics
 
-**Target:** Behavioral signals integrated into ranking; analytics dashboard live
+**Target:** Behavioral signals integrated into ranking; analytics dashboard live; rule-based personalization and data governance in place
 
 | Deliverable | Timeline |
 |---|---|
@@ -280,7 +347,11 @@ Returning user (authenticated) searches "jacket"
 | Query analytics dashboard | Week 11 |
 | A/B testing framework | Week 12 |
 | Zero-result query handling improvements | Week 12 |
+| Data retention policies + GDPR erasure endpoint | Week 12–13 |
 | Ranking weight tuning cycle 1 | Week 13 |
+| Rule-based personalization (Valkey affinity profiles) | Week 8–13 (incremental) |
+| Integration & E2E test suite (Testcontainers + k6) | Week 13 |
+| Feature flag strategy + canary rollout to production | Week 14 |
 
 ### Phase 3 — Personalization + ML Ranking
 
@@ -293,6 +364,124 @@ Returning user (authenticated) searches "jacket"
 | ML ranking model (offline training) | Week 18–20 |
 | Shadow ML ranking validation | Week 21 |
 | ML ranking production rollout | Week 22 |
+
+### Phase 4 — Premium AI Search
+
+**Target:** Launch premium AI-assisted search with measurable conversion lift and controlled inference cost
+
+| Deliverable | Timeline |
+|---|---|
+| Embedding pipeline + vector index | Week 23 |
+| Hybrid ranking (keyword + semantic + ML) | Week 24 |
+| LLM query understanding service | Week 25 |
+| AI summaries + comparison insights | Week 26 |
+| Conversational search experience | Week 27 |
+| Premium analytics dashboard | Week 28 |
+| A/B test + phased rollout (10% → 50% → 100%) | Week 29 |
+
+### Phase 4.5 — Premium Expansion Pack
+
+**Target:** Differentiate premium tier with defensible AI capabilities beyond baseline search
+
+| Deliverable | Timeline |
+|---|---|
+| RAG knowledge ingestion + citation-ready answer service | Week 30 |
+| AI recommendations (similar, bundle, cross-sell) | Week 31 |
+| Merchandising controls for recommendations | Week 31 |
+| Expansion A/B test and monetization validation | Week 32 |
+
+---
+
+## 11. Premium Pricing Strategy
+
+### Packaging
+
+| Tier | Target Segment | Included Capabilities | Indicative Price |
+|---|---|---|---|
+| Standard | All merchants | Core keyword + ML search (Phases 1-3) | Included in platform base plan |
+| Premium Starter | SMB merchants | Hybrid search, LLM query understanding, AI summaries | $299/month + usage |
+| Premium Growth | Mid-market merchants | Starter + conversational search + recommendations + RAG answers | $999/month + usage |
+| Premium Enterprise | Large merchants | Growth + dedicated capacity, SSO/RBAC, custom SLA | Custom annual contract |
+
+### Usage-Based Add-Ons
+
+- AI summary and comparison generations: metered per 1,000 requests
+- RAG answer requests: metered per 1,000 requests
+- Conversational turns above plan allowance: metered per 1,000 turns
+- Optional premium support SLA: add-on fee
+
+### Pricing Principles
+
+- Value-anchored to measurable conversion and revenue lift, not only infrastructure cost
+- Transparent overage pricing with hard spend caps per tenant
+- Annual prepay discount to improve retention and cash flow
+- 14-day premium trial for qualified merchants
+
+---
+
+## 12. Go-To-Market Strategy
+
+### Positioning
+
+- Position premium as a conversion and revenue engine, not an AI novelty feature
+- Core promise: faster product discovery, higher purchase intent capture, and measurable ROI
+
+### Launch Phases
+
+| GTM Stage | Audience | Motion | Success Criteria |
+|---|---|---|---|
+| Beta | Design partners (10-20 merchants) | White-glove onboarding + weekly tuning | ≥ 25% conversion lift in pilot cohort |
+| Early Access | Existing high-volume merchants | In-product upsell + CSM-led demos | 30% of invited merchants start trial |
+| General Availability | All eligible merchants | Self-serve trial + sales-assisted enterprise | Trial-to-paid ≥ 18% |
+
+### Sales & Marketing Motions
+
+- ROI calculator in admin dashboard using each merchant's own baseline metrics
+- In-product prompts when high-intent gaps are detected (zero-result spikes, poor CTR segments)
+- Case studies from beta cohort with category-specific outcomes
+- Co-marketing bundle with onboarding credits for annual plans
+
+### Enablement & Operations
+
+- CSM playbook for onboarding, KPI baselining, and quarterly business reviews
+- Sales battlecard comparing Standard vs Premium outcomes and effort-to-value
+- Support runbooks for LLM degradation, retrieval drift, and recommendation quality issues
+
+---
+
+## 13. Phase 2 Dependency Matrix
+
+| Issue | Workstream | Depends On | Priority | Severity If Delayed |
+|---|---|---|---|---|
+| #12 | Analytics Event Pipeline (RabbitMQ) | Phase 1 search API live | P0 | High — blocks all signal-based features |
+| #13 | CTR Signal Computation | #12 | P0 | High — ranking improvement blocked |
+| #14 | Conversion Signal Computation | #12 | P0 | High — ranking improvement blocked |
+| #15 | A/B Testing Framework | #13, #14 | P1 | Medium — ranking validation deferred |
+| #16 | Query Analytics Dashboard | #12 | P1 | Medium — analytics visibility only |
+| #17 | Zero-Result Improvements | #16 | P1 | Medium — UX quality deferred |
+| #18 | Ranking Weight Tuning Cycle 1 | #13, #14, #15 | P1 | Medium — optimization deferred |
+| #47 | Rule-Based Personalization | #12, Valkey cluster live | P1 | Medium — personalization lift deferred |
+| #48 | Integration & E2E Test Suite | #12–#18, #47 | P1 | High — production confidence blocked |
+| #49 | Data Retention & GDPR Compliance | #12 | P0 | Critical — legal/regulatory exposure |
+| #50 | Feature Flag Strategy & Canary Rollout | #12–#18, #47–#49 | P0 | High — production deployment blocked |
+
+---
+
+## 14. Phase 4 Dependency Matrix
+
+| Issue | Workstream | Depends On | Priority | Owner Placeholder | Severity If Delayed |
+|---|---|---|---|---|---|
+| #34 | Embedding Pipeline & Vector Index | Phase 1 data/index baseline | P0 | TBD - Search Platform Lead | High |
+| #35 | Hybrid Search Engine | #34, Phase 3 ML scores | P0 | TBD - Search Relevance Lead | High |
+| #36 | LLM Query Understanding | LLM runtime, cache layer | P0 | TBD - AI Platform Lead | High |
+| #37 | AI Summaries & Comparison | #36, product metadata | P1 | TBD - AI Experience Lead | Medium |
+| #38 | Conversational Search | #35, #36, session store | P1 | TBD - Conversation UX Lead | Medium |
+| #39 | Premium Analytics Dashboard | #34-#38 event telemetry | P1 | TBD - Data/Analytics Lead | Medium |
+| #44 | A/B Testing Premium vs Phase 3 | #34-#39 | P0 | TBD - Experimentation Lead | High |
+| #40 | RAG Knowledge Service | #34, #36, #39, #44 | P1 | TBD - Knowledge AI Lead | Medium |
+| #41 | AI Recommendations | #35, #39, #44, #40 | P1 | TBD - Recommendations Lead | Medium |
+| #42 | Quality & Safety Validation | #40, #41, #44, #39 | P0 | TBD - QA/RAI Lead | High |
+| #43 | Expansion Rollout | #40, #41, #42, #44 | P0 | TBD - Release Manager | High |
 
 ---
 
@@ -314,4 +503,4 @@ Returning user (authenticated) searches "jacket"
 
 *Document Owner: Product Team*  
 *Last Updated: 2026-05-07*  
-*Next Review: Phase 1 kickoff*
+*Next Review: Phase 3 planning review*
