@@ -32,6 +32,7 @@ public static class SearchConstants
             => $"search::{queryHash}::{filtersHash}::{page}";
         public static string Suggest(string prefixHash)
             => $"suggest::{prefixHash}";
+        public const string SuggestVersion = "suggest::version";
     }
 
     public static class CacheTtl

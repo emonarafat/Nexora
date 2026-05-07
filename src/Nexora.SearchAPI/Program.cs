@@ -71,6 +71,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
 builder.Services.AddSingleton<TypesenseClientFactory>();
 builder.Services.AddSingleton<IValkeyCache, ValkeyCache>();
 builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+builder.Services.AddScoped<ISuggestSearchClient, TypesenseSuggestSearchClient>();
 
 builder.Services.AddSingleton<QuerySanitizer>();
 builder.Services.AddSingleton<QueryNormalizer>();

@@ -11,9 +11,18 @@ public static class SuggestEndpoints
         app.MapGet("/api/v1/suggest", HandleAsync)
             .WithName("Suggest")
             .WithSummary("Typeahead suggestions")
+            .WithDescription("Returns autocomplete suggestions for query prefixes. Frontend callers should debounce requests to 300ms.")
             .WithTags("Suggest")
-            .Produces<SuggestResponse>()
+            .Produces<IReadOnlyList<SuggestionItem>>()
             .ProducesProblem(400);
+
+        app.MapPost("/api/v1/suggest/cache/invalidate", InvalidateAsync)
+            .WithName("InvalidateSuggestCache")
+            .WithSummary("Invalidate suggest cache")
+            .WithDescription("Invalidates suggest cache after product index updates.")
+            .WithTags("Suggest")
+            .Produces(StatusCodes.Status204NoContent);
+
         return app;
     }
 
@@ -29,7 +38,15 @@ public static class SuggestEndpoints
         if (limit is < 1 or > SearchConstants.MaxSuggestResults)
             return Results.Problem($"limit must be 1-{SearchConstants.MaxSuggestResults}.", statusCode: 400);
 
-        return Results.Ok(await handler.HandleAsync(
-            new SuggestRequest { Query = q, Limit = limit, Category = category }, ct));
+        var response = await handler.HandleAsync(new SuggestRequest { Query = q, Limit = limit, Category = category }, ct);
+        return Results.Ok(response.Suggestions);
+    }
+
+    private static async Task<IResult> InvalidateAsync(
+        [FromServices] SuggestQueryHandler handler = null!,
+        CancellationToken ct = default)
+    {
+        await handler.InvalidateCacheAsync(ct);
+        return Results.NoContent();
     }
 }
