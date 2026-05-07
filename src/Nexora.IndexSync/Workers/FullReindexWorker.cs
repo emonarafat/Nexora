@@ -6,6 +6,7 @@ public sealed class FullReindexWorker(
     CdcChangeReader reader,
     FieldMapper mapper,
     TypesenseUpsertClient upsertClient,
+    SearchApiSuggestCacheInvalidator cacheInvalidator,
     ILogger<FullReindexWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -35,6 +36,8 @@ public sealed class FullReindexWorker(
             total += rows.Count; page++;
             logger.LogInformation("Re-indexed {Total} so far", total);
         }
+        if (total > 0)
+            await cacheInvalidator.InvalidateAsync(ct);
         logger.LogInformation("Full re-index done: {Total}", total);
     }
 

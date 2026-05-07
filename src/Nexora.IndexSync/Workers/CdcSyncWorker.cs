@@ -6,6 +6,7 @@ public sealed class CdcSyncWorker(
     CdcChangeReader reader,
     FieldMapper mapper,
     TypesenseUpsertClient upsertClient,
+    SearchApiSuggestCacheInvalidator cacheInvalidator,
     ILogger<CdcSyncWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -24,6 +25,7 @@ public sealed class CdcSyncWorker(
                         .Select(c => c.ProductId.ToString()).ToList();
                     if (upserts.Count > 0) await upsertClient.UpsertBatchAsync(upserts, ct);
                     if (deletes.Count > 0) await upsertClient.DeleteBatchAsync(deletes, ct);
+                    await cacheInvalidator.InvalidateAsync(ct);
                 }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
