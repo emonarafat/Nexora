@@ -178,6 +178,14 @@ Adjustments:
 
 ---
 
+## ☁️ Typesense Cluster Infrastructure
+
+- Terraform module: `infra/terraform/typesense`
+- Environment configs: `infra/terraform/typesense/environments/{dev,staging,prod}.tfvars`
+- Operations runbook: `docs/runbooks/typesense-cluster.md`
+
+---
+
 ## 📞 API Examples
 
 ### Search

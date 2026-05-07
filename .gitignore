@@ -76,3 +76,10 @@ temp/
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
