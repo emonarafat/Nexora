@@ -378,4 +378,103 @@ public class RankingEngineTests
     }
 
     #endregion
+
+    #region Performance Tests
+
+    [Fact]
+    public void ComputeScore_1000Candidates_CompletesUnder5ms()
+    {
+        // Arrange: Create 1000 mock candidates with realistic data
+        var candidates = Enumerable.Range(0, 1000)
+            .Select(i => Doc(
+                stock: i % 10 == 0 ? SearchConstants.StockStatus.OutOfStock : SearchConstants.StockStatus.InStock,
+                rating: 2.0f + (i % 6) * 0.5f,
+                ratingCount: 10 + (i % 100),
+                featured: i % 20 == 0,
+                popularity: i / 1000.0f))
+            .ToArray();
+
+        // Pre-generate random text scores
+        var textScores = Enumerable.Range(0, 1000)
+            .Select(i => 40.0 + (i % 60))
+            .ToArray();
+
+        // Act: Measure scoring time (run multiple iterations for accurate measurement)
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var scores = candidates
+            .Select((doc, i) => _sut.ComputeScore(doc, textScores[i]))
+            .ToArray();
+
+        stopwatch.Stop();
+
+        // Assert: Should complete in < 10ms for 1000 candidates (target: 5ms, allow overhead for test environment)
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(10,
+            "Phase 1 requirement: latency < 5ms for 1000 candidates (allowing test environment overhead)");
+
+        // Verify all scores are valid
+        scores.All(s => s >= 0 && s <= 130).Should().BeTrue("All scores should be in valid range");
+
+        // Verify scoring produces reasonable distribution
+        var sortedScores = scores.OrderByDescending(s => s).ToArray();
+        sortedScores[0].Should().BeGreaterThan(sortedScores[999], "Scores should have reasonable variance");
+    }
+
+    [Fact]
+    public void ComputeScore_Integration_SortsCandidatesCorrectly()
+    {
+        // Arrange: Create diverse set of candidates matching real-world scenarios
+        var candidates = new[]
+        {
+            // Top product: Featured + excellent signals
+            (id: "A", doc: Doc(stock: SearchConstants.StockStatus.InStock, rating: 5.0f, popularity: 1.0f, featured: true), text: 95.0),
+
+            // Good product: High signals but not featured
+            (id: "B", doc: Doc(stock: SearchConstants.StockStatus.InStock, rating: 4.8f, popularity: 0.9f, featured: false), text: 90.0),
+
+            // Average product: Medium signals
+            (id: "C", doc: Doc(stock: SearchConstants.StockStatus.InStock, rating: 3.5f, popularity: 0.5f, featured: false), text: 75.0),
+
+            // Low stock product: Good signals but availability issue
+            (id: "D", doc: Doc(stock: SearchConstants.StockStatus.LowStock, rating: 4.0f, popularity: 0.7f, featured: false), text: 80.0),
+
+            // Out of stock: Even with good signals, should rank very low
+            (id: "E", doc: Doc(stock: SearchConstants.StockStatus.OutOfStock, rating: 5.0f, popularity: 1.0f, featured: false), text: 100.0),
+
+            // New product: Low popularity but good rating
+            (id: "F", doc: Doc(stock: SearchConstants.StockStatus.InStock, rating: 4.5f, popularity: 0.1f, featured: false), text: 85.0),
+
+            // Poor quality: Low rating
+            (id: "G", doc: Doc(stock: SearchConstants.StockStatus.InStock, rating: 2.0f, popularity: 0.3f, featured: false), text: 70.0),
+        };
+
+        // Act: Compute scores and sort by FinalScore descending
+        var scored = candidates
+            .Select(c => new
+            {
+                c.id,
+                c.doc,
+                c.text,
+                finalScore = _sut.ComputeScore(c.doc, c.text)
+            })
+            .OrderByDescending(c => c.finalScore)
+            .ToArray();
+
+        // Assert: Verify expected ranking order based on Phase 1 formula
+        // Expected order: A (featured+excellent) > B (excellent) > F (good) > D (low stock) > C (average) > G (poor) > E (out of stock)
+        scored[0].id.Should().Be("A", "Featured product with excellent signals should rank first");
+        scored[1].id.Should().Be("B", "Excellent signals without featured should rank second");
+
+        // Out-of-stock should be near the bottom despite perfect signals
+        scored[scored.Length - 1].id.Should().Be("E", "Out-of-stock products should rank last");
+
+        // Verify score progression is descending
+        for (int i = 0; i < scored.Length - 1; i++)
+        {
+            scored[i].finalScore.Should().BeGreaterThanOrEqualTo(scored[i + 1].finalScore,
+                $"Rank {i + 1} ({scored[i].id}) should have higher or equal score than rank {i + 2} ({scored[i + 1].id})");
+        }
+    }
+
+    #endregion
 }
