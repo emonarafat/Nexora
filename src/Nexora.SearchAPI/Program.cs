@@ -19,6 +19,7 @@ builder.Services.AddOpenTelemetry()
         .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Nexora.SearchAPI"))
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
+        .AddSource("Nexora.SearchAPI.Pipeline")
         .AddOtlpExporter())
     .WithMetrics(m => m
         .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Nexora.SearchAPI"))
