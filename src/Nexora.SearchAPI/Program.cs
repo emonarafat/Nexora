@@ -100,8 +100,9 @@ app.Use(async (context, next) =>
 {
     const string CorrelationIdHeader = "X-Correlation-ID";
 
-    var correlationId = context.Request.Headers.TryGetValue(CorrelationIdHeader, out var headerValue)
-        && !string.IsNullOrWhiteSpace(headerValue)
+    var correlationId =
+        context.Request.Headers.TryGetValue(CorrelationIdHeader, out var headerValue) &&
+        !string.IsNullOrWhiteSpace(headerValue)
             ? headerValue.ToString()
             : context.TraceIdentifier;
 

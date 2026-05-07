@@ -163,7 +163,7 @@ public sealed partial class SearchFilterExpressionValidator
 
         var facets = facetBy.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(facet => facet.ToLowerInvariant())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct()
             .ToList();
 
         if (facets.Count == 0)
