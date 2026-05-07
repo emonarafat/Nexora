@@ -422,7 +422,7 @@ resource "kubernetes_cron_job_v1" "typesense_snapshot_backup" {
 
             container {
               name  = "snapshot-backup"
-              image = "alpine:3.20"
+              image = "alpine:3.21.3"
               env {
                 name = "TYPESENSE_API_KEY"
                 value_from {
@@ -440,7 +440,7 @@ resource "kubernetes_cron_job_v1" "typesense_snapshot_backup" {
                   apk add --no-cache curl aws-cli >/dev/null
                   TS="$(date -u +%Y%m%dT%H%M%SZ)"
                   curl -fsS -X POST "http://${local.service_name}.${var.typesense_namespace}.svc.cluster.local:8108/operations/snapshot" \
-                    -H "X-TYPESENSE-API-KEY:$${TYPESENSE_API_KEY}" \
+                    -H "X-TYPESENSE-API-KEY: $${TYPESENSE_API_KEY}" \
                     -o "/tmp/snapshot-${TS}.json"
                   aws s3 cp "/tmp/snapshot-${TS}.json" "s3://${aws_s3_bucket.typesense_backups.id}/${var.environment}/snapshots/snapshot-${TS}.json"
                 EOT
@@ -477,7 +477,7 @@ resource "kubernetes_cron_job_v1" "typesense_weekly_restore_test" {
 
             container {
               name  = "restore-test"
-              image = "alpine:3.20"
+              image = "alpine:3.21.3"
               command = [
                 "/bin/sh",
                 "-c",
