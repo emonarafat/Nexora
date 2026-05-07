@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexora-index-sync
+  labels: { app: nexora-index-sync }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: nexora-index-sync }
+  template:
+    metadata:
+      labels: { app: nexora-index-sync }
+    spec:
+      containers:
+      - name: index-sync
+        image: nexora/index-sync:latest
+        env:
+        - name: DOTNET_ENVIRONMENT
+          value: Production
+        - name: Typesense__Host
+          valueFrom:
+            secretKeyRef: { name: nexora-typesense, key: host }
+        - name: Typesense__ApiKey
+          valueFrom:
+            secretKeyRef: { name: nexora-typesense, key: apiKey }
+        - name: ConnectionStrings__MSSQL
+          valueFrom:
+            secretKeyRef: { name: nexora-mssql, key: connectionString }
+        resources:
+          requests: { cpu: 50m, memory: 128Mi }
+          limits: { cpu: 200m, memory: 256Mi }

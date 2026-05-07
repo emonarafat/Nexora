@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexora-admin-api
+  labels: { app: nexora-admin-api }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: nexora-admin-api }
+  template:
+    metadata:
+      labels: { app: nexora-admin-api }
+    spec:
+      containers:
+      - name: admin-api
+        image: nexora/admin-api:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ConnectionStrings__Postgres
+          valueFrom:
+            secretKeyRef: { name: nexora-postgres, key: connectionString }
+        livenessProbe:
+          httpGet: { path: /health, port: 8080 }
+          initialDelaySeconds: 15
+        resources:
+          requests: { cpu: 50m, memory: 128Mi }
+          limits: { cpu: 200m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexora-admin-api-svc
+spec:
+  selector: { app: nexora-admin-api }
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
