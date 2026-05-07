@@ -21,6 +21,9 @@ public sealed class SuggestQueryHandler(
         var sw = Stopwatch.StartNew();
         var sanitized = sanitizer.Sanitize(req.Query);
         var normalizedPrefix = normalizer.Normalize(sanitized);
+        var normalizedCategory = string.IsNullOrWhiteSpace(req.Category)
+            ? null
+            : req.Category.Trim().ToLowerInvariant();
         var limit = Math.Clamp(req.Limit, 1, SearchConstants.MaxSuggestResults);
         if (string.IsNullOrWhiteSpace(normalizedPrefix) || normalizedPrefix.Length < 2)
         {
@@ -30,7 +33,7 @@ public sealed class SuggestQueryHandler(
         try
         {
             var cacheVersion = await cache.GetAsync<string>(SearchConstants.CacheKeys.SuggestVersion, ct) ?? "v1";
-            var cacheKey = BuildCacheKey(normalizedPrefix, req.Category, limit, cacheVersion);
+            var cacheKey = BuildCacheKey(normalizedPrefix, normalizedCategory, limit, cacheVersion);
             var cached = await cache.GetAsync<List<SuggestionItem>>(cacheKey, ct);
             if (cached is not null)
             {
@@ -42,11 +45,7 @@ public sealed class SuggestQueryHandler(
                 };
             }
 
-            var suggestions = (await searchClient.SearchAsync(normalizedPrefix, limit, req.Category, ct))
-                .OrderByDescending(x => x.PopularityScore)
-                .ThenBy(x => x.Text, StringComparer.OrdinalIgnoreCase)
-                .Take(limit)
-                .ToList();
+            var suggestions = (await searchClient.SearchAsync(normalizedPrefix, limit, normalizedCategory, ct)).ToList();
 
             await cache.SetAsync(cacheKey, suggestions, SearchConstants.CacheTtl.Suggest, ct);
 
@@ -71,13 +70,13 @@ public sealed class SuggestQueryHandler(
 
     public Task InvalidateCacheAsync(CancellationToken ct)
     {
-        var version = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
+        var version = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
         return cache.SetAsync(SearchConstants.CacheKeys.SuggestVersion, version, TimeSpan.FromDays(1), ct);
     }
 
     private static string BuildCacheKey(string normalizedPrefix, string? category, int limit, string version)
     {
-        var raw = $"{version}|{normalizedPrefix}|{category?.Trim().ToLowerInvariant() ?? "*"}|{limit}";
+        var raw = $"{version}|{normalizedPrefix}|{category ?? "*"}|{limit}";
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
         return SearchConstants.CacheKeys.Suggest(hash);
     }

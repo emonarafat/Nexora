@@ -14,8 +14,8 @@ public class SuggestQueryHandlerTests
     {
         var cache = new FakeValkeyCache();
         var searchClient = new FakeSuggestSearchClient([
-            new SuggestionItem { Text = "A", Category = "Shoes", PopularityScore = 2 },
-            new SuggestionItem { Text = "B", Category = "Shoes", PopularityScore = 10 }
+            new SuggestionItem { Text = "B", Category = "Shoes", PopularityScore = 10 },
+            new SuggestionItem { Text = "A", Category = "Shoes", PopularityScore = 2 }
         ]);
         var sut = CreateSut(cache, searchClient);
 

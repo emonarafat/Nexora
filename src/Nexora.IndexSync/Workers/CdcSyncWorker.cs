@@ -25,7 +25,8 @@ public sealed class CdcSyncWorker(
                         .Select(c => c.ProductId.ToString()).ToList();
                     if (upserts.Count > 0) await upsertClient.UpsertBatchAsync(upserts, ct);
                     if (deletes.Count > 0) await upsertClient.DeleteBatchAsync(deletes, ct);
-                    await cacheInvalidator.InvalidateAsync(ct);
+                    if (upserts.Count > 0 || deletes.Count > 0)
+                        await cacheInvalidator.InvalidateAsync(ct);
                 }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }

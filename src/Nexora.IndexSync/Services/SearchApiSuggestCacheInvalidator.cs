@@ -5,6 +5,8 @@ public sealed class SearchApiSuggestCacheInvalidator(
     IConfiguration config,
     ILogger<SearchApiSuggestCacheInvalidator> logger)
 {
+    private const string InvalidationPath = "/api/v1/suggest/cache/invalidate";
+
     public async Task InvalidateAsync(CancellationToken ct)
     {
         var baseUrl = config["SearchApi:BaseUrl"];
@@ -13,10 +15,14 @@ public sealed class SearchApiSuggestCacheInvalidator(
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/api/v1/suggest/cache/invalidate");
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}{InvalidationPath}");
             var response = await httpClientFactory.CreateClient("SearchApi").SendAsync(request, ct);
             if (!response.IsSuccessStatusCode)
                 logger.LogWarning("Suggest cache invalidation failed with status code {StatusCode}", response.StatusCode);
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "Suggest cache invalidation request timed out");
         }
         catch (Exception ex)
         {
