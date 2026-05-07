@@ -11,10 +11,12 @@ public static class SearchEndpoints
         app.MapGet("/api/v1/search", HandleAsync)
             .WithName("Search")
             .WithSummary("Full-text product search")
+            .WithDescription("Search products with full-text query, filter expressions, facets, sorting, and pagination.")
             .WithTags("Search")
             .Produces<SearchResponse>()
             .ProducesProblem(400)
-            .ProducesProblem(429);
+            .ProducesProblem(429)
+            .RequireRateLimiting("SearchLimit");
         return app;
     }
 
@@ -25,21 +27,24 @@ public static class SearchEndpoints
         [FromQuery] string sort = SearchConstants.SortModes.Relevance,
         [FromQuery(Name = "filter_by")] string? filterBy = null,
         [FromQuery(Name = "facet_by")] string? facetBy = null,
+        [FromServices] SearchRequestValidator validator = null!,
         [FromServices] SearchQueryHandler handler = null!,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(q))
-            return Results.Problem("Query 'q' is required.", statusCode: 400);
-        if (q.Length > SearchConstants.MaxQueryLength)
-            return Results.Problem($"Query must be <= {SearchConstants.MaxQueryLength} chars.", statusCode: 400);
-        if (perPage is < 1 or > SearchConstants.MaxPageSize)
-            return Results.Problem($"per_page must be 1-{SearchConstants.MaxPageSize}.", statusCode: 400);
-        if (page > SearchConstants.MaxDeepPaginationPage)
-            return Results.Problem($"Pagination beyond page {SearchConstants.MaxDeepPaginationPage} not allowed.", statusCode: 429);
+        var validation = validator.Validate(new SearchRequest
+        {
+            Query = q,
+            Page = page,
+            PerPage = perPage,
+            Sort = sort,
+            FilterBy = filterBy,
+            FacetBy = facetBy
+        });
 
-        var response = await handler.HandleAsync(
-            new SearchRequest { Query = q, Page = page, PerPage = perPage, Sort = sort, FilterBy = filterBy, FacetBy = facetBy },
-            ct);
+        if (!validation.IsValid)
+            return Results.Problem(validation.Error, statusCode: validation.StatusCode);
+
+        var response = await handler.HandleAsync(validation.Request!, ct);
         return Results.Ok(response);
     }
 }

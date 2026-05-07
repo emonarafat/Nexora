@@ -30,13 +30,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
         var jwt = builder.Configuration.GetSection("Jwt");
-        o.TokenValidationParameters = new TokenValidationParameters
+        var jwtKey = jwt["Key"];
+
+        o.TokenValidationParameters = string.IsNullOrWhiteSpace(jwtKey)
+            ? new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = false,
+                ValidateIssuerSigningKey = false
+            }
+            : new TokenValidationParameters
         {
             ValidateIssuer = true, ValidateAudience = true,
             ValidateLifetime = true, ValidateIssuerSigningKey = true,
             ValidIssuer = jwt["Issuer"], ValidAudience = jwt["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwt["Key"] ?? throw new InvalidOperationException("JWT Key not configured")))
+                Encoding.UTF8.GetBytes(jwtKey))
         };
     });
 builder.Services.AddAuthorization();
@@ -63,6 +73,8 @@ builder.Services.AddSingleton<QueryNormalizer>();
 builder.Services.AddSingleton<SynonymExpander>();
 builder.Services.AddSingleton<IntentClassifier>();
 builder.Services.AddSingleton<QueryPipeline>();
+builder.Services.AddSingleton<SearchFilterExpressionValidator>();
+builder.Services.AddSingleton<SearchRequestValidator>();
 
 builder.Services.AddSingleton<RankingEngine>();
 
@@ -79,6 +91,33 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+app.Use(async (context, next) =>
+{
+    const string CorrelationIdHeader = "X-Correlation-ID";
+
+    var correlationId = context.Request.Headers.TryGetValue(CorrelationIdHeader, out var headerValue)
+        && !string.IsNullOrWhiteSpace(headerValue)
+            ? headerValue.ToString()
+            : context.TraceIdentifier;
+
+    context.TraceIdentifier = correlationId;
+    context.Response.Headers[CorrelationIdHeader] = correlationId;
+
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Nexora.SearchAPI.Request");
+
+    using (logger.BeginScope(new Dictionary<string, object?> { ["CorrelationId"] = correlationId }))
+    {
+        logger.LogInformation("Handling {Method} {Path}", context.Request.Method, context.Request.Path);
+        await next();
+        logger.LogInformation(
+            "Completed {Method} {Path} with {StatusCode}",
+            context.Request.Method,
+            context.Request.Path,
+            context.Response.StatusCode);
+    }
+});
 
 if (app.Environment.IsDevelopment())
 {

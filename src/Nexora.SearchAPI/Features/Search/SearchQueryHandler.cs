@@ -12,22 +12,28 @@ public sealed class SearchQueryHandler(
     TypesenseClientFactory clientFactory,
     QueryPipeline pipeline,
     RankingEngine ranking,
-    IValkeyCache cache,
     IRabbitMqPublisher publisher,
     ILogger<SearchQueryHandler> logger)
 {
     public async Task<SearchResponse> HandleAsync(SearchRequest req, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
+        logger.LogInformation(
+            "Executing search query {Query} page {Page} perPage {PerPage} sort {Sort}",
+            req.Query,
+            req.Page,
+            req.PerPage,
+            req.Sort);
+
         var processed = await pipeline.ProcessAsync(req.Query, ct);
 
         var sortBy = req.Sort switch
         {
             SearchConstants.SortModes.PriceAsc => "price:asc",
             SearchConstants.SortModes.PriceDesc => "price:desc",
-            SearchConstants.SortModes.Rating => "rating:desc",
+            SearchConstants.SortModes.Rating => "rating:desc,rating_count:desc",
             SearchConstants.SortModes.Newest => "created_at:desc",
-            _ => "_text_match:desc"
+            _ => "_text_match:desc,popularity_score:desc"
         };
 
         var client = clientFactory.CreateClient();
@@ -83,11 +89,19 @@ public sealed class SearchQueryHandler(
         {
             foreach (var fc in result.FacetCounts)
             {
-                facets[fc.FieldName] = fc.Counts?.Select(c => new FacetValue
+                var values = fc.Counts?
+                    .Where(c => c.Count > 0 && !string.IsNullOrWhiteSpace(c.Value))
+                    .Select(c => new FacetValue
+                    {
+                        Value = c.Value,
+                        Count = c.Count
+                    })
+                    .ToList() ?? [];
+
+                if (!string.IsNullOrWhiteSpace(fc.FieldName) && values.Count > 0)
                 {
-                    Value = c.Value,
-                    Count = c.Count
-                }).ToList() ?? [];
+                    facets[fc.FieldName] = values;
+                }
             }
         }
 
