@@ -90,7 +90,7 @@ public sealed class SearchQueryHandler(
             foreach (var fc in result.FacetCounts)
             {
                 var values = fc.Counts?
-                    .Where(c => c.Count > 0 && !string.IsNullOrWhiteSpace(c.Value))
+                    .Where(IsValidFacetCount)
                     .Select(c => new FacetValue
                     {
                         Value = c.Value,
@@ -126,4 +126,7 @@ public sealed class SearchQueryHandler(
             LatencyMs = sw.Elapsed.TotalMilliseconds
         };
     }
+
+    private static bool IsValidFacetCount(FacetCountHit count)
+        => count.Count > 0 && !string.IsNullOrWhiteSpace(count.Value);
 }

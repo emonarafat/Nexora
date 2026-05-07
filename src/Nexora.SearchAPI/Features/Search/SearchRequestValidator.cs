@@ -72,6 +72,11 @@ public sealed record SearchRequestValidationResult(SearchRequest? Request, int? 
 public sealed partial class SearchFilterExpressionValidator
 {
     private const int MaxFilterLength = 500;
+    private static readonly HashSet<char> AllowedFilterCharacters =
+    [
+        '_', ':', '=', '[', ']', '.', ',', ' ', '-',
+        '(', ')', '&', '|', '>', '<'
+    ];
 
     private static readonly HashSet<string> AllowedFilterFields = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -176,5 +181,5 @@ public sealed partial class SearchFilterExpressionValidator
 
     private static bool HasOnlyAllowedCharacters(string filterBy)
         => filterBy.All(ch => char.IsLetterOrDigit(ch)
-            || ch is '_' or ':' or '=' or '[' or ']' or '.' or ',' or ' ' or '-' or '(' or ')' or '&' or '|' or '>' or '<');
+            || AllowedFilterCharacters.Contains(ch));
 }

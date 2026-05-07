@@ -31,6 +31,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         var jwt = builder.Configuration.GetSection("Jwt");
         var jwtKey = jwt["Key"];
+        var allowRelaxedJwtValidation = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Test");
+
+        if (string.IsNullOrWhiteSpace(jwtKey) && !allowRelaxedJwtValidation)
+            throw new InvalidOperationException("JWT Key not configured.");
 
         o.TokenValidationParameters = string.IsNullOrWhiteSpace(jwtKey)
             ? new TokenValidationParameters
