@@ -10,7 +10,6 @@ namespace Nexora.SearchAPI.Features.Suggest;
 public sealed class SuggestQueryHandler(
     TypesenseClientFactory clientFactory,
     QuerySanitizer sanitizer,
-    IValkeyCache cache,
     ILogger<SuggestQueryHandler> logger)
 {
     public async Task<SuggestResponse> HandleAsync(SuggestRequest req, CancellationToken ct)
