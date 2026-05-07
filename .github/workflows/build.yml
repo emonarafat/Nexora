@@ -1,0 +1,57 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore Nexora.slnx
+
+    - name: Build
+      run: dotnet build Nexora.slnx --no-restore -c Release
+
+    - name: Test
+      run: dotnet test Nexora.slnx --no-build -c Release --verbosity normal \
+           --results-directory ./test-results \
+           --logger "trx;LogFileName=results.trx"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: ./test-results
+
+  docker-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        service: [SearchAPI, IndexSync, AdminAPI]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build Docker image (${{ matrix.service }})
+      run: |
+        docker build -f docker/Dockerfile.${{ matrix.service }} \
+          -t nexora/${{ matrix.service | lower }}:${{ github.sha }} .

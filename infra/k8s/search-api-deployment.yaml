@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexora-search-api
+  labels: { app: nexora-search-api }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: nexora-search-api }
+  template:
+    metadata:
+      labels: { app: nexora-search-api }
+    spec:
+      containers:
+      - name: search-api
+        image: nexora/search-api:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: Typesense__Host
+          valueFrom:
+            secretKeyRef: { name: nexora-typesense, key: host }
+        - name: Typesense__ApiKey
+          valueFrom:
+            secretKeyRef: { name: nexora-typesense, key: apiKey }
+        - name: Redis__ConnectionString
+          valueFrom:
+            secretKeyRef: { name: nexora-redis, key: connectionString }
+        livenessProbe:
+          httpGet: { path: /health, port: 8080 }
+          initialDelaySeconds: 15
+        readinessProbe:
+          httpGet: { path: /health, port: 8080 }
+          initialDelaySeconds: 5
+        resources:
+          requests: { cpu: 100m, memory: 256Mi }
+          limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexora-search-api-svc
+spec:
+  selector: { app: nexora-search-api }
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nexora-search-api-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nexora-search-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

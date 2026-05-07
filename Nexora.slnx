@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Nexora.AdminAPI/Nexora.AdminAPI.csproj" />
+    <Project Path="src/Nexora.IndexSync/Nexora.IndexSync.csproj" />
+    <Project Path="src/Nexora.SearchAPI/Nexora.SearchAPI.csproj" />
+    <Project Path="src/Nexora.Shared/Nexora.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Nexora.IndexSync.Tests/Nexora.IndexSync.Tests.csproj" />
+    <Project Path="tests/Nexora.SearchAPI.Tests/Nexora.SearchAPI.Tests.csproj" />
+  </Folder>
+</Solution>
