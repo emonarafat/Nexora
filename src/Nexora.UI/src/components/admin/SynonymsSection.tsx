@@ -5,16 +5,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchSynonyms,
   createSynonym,
-  updateSynonym,
   deleteSynonym,
 } from '../../services/adminApi';
 import type { Synonym } from '../../types/admin';
 
-export function SynonymsSection() {
+type AdminActionStatus = 'success' | 'error';
+
+interface SynonymsSectionProps {
+  onAction: (action: string, target: string, status: AdminActionStatus) => void;
+}
+
+export function SynonymsSection({ onAction }: SynonymsSectionProps) {
   const queryClient = useQueryClient();
   const [newTerms, setNewTerms] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTerms, setEditTerms] = useState('');
 
   // Fetch synonyms
   const { data: synonyms = [], isLoading, error } = useQuery({
@@ -24,21 +27,14 @@ export function SynonymsSection() {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (terms: string[]) => createSynonym(terms),
+    mutationFn: ({ term, synonyms }: { term: string; synonyms: string[] }) => createSynonym(term, synonyms),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['synonyms'] });
       setNewTerms('');
+      onAction('Create synonym', 'synonyms list', 'success');
     },
-  });
-
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: ({ id, terms }: { id: string; terms: string[] }) =>
-      updateSynonym(id, terms),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['synonyms'] });
-      setEditingId(null);
-      setEditTerms('');
+    onError: () => {
+      onAction('Create synonym', 'synonyms list', 'error');
     },
   });
 
@@ -47,19 +43,23 @@ export function SynonymsSection() {
     mutationFn: deleteSynonym,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['synonyms'] });
+      onAction('Delete synonym', 'synonyms list', 'success');
+    },
+    onError: () => {
+      onAction('Delete synonym', 'synonyms list', 'error');
     },
   });
 
   const handleCreate = () => {
     if (!newTerms.trim()) return;
-    const terms = newTerms.split(',').map((t) => t.trim());
-    createMutation.mutate(terms);
-  };
+    const terms = newTerms
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (terms.length === 0) return;
 
-  const handleUpdate = (id: string) => {
-    if (!editTerms.trim()) return;
-    const terms = editTerms.split(',').map((t) => t.trim());
-    updateMutation.mutate({ id, terms });
+    const [term, ...synonyms] = terms;
+    createMutation.mutate({ term, synonyms: synonyms.length > 0 ? synonyms : [term] });
   };
 
   if (isLoading) {
@@ -113,73 +113,35 @@ export function SynonymsSection() {
 
       {/* Synonyms List */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-slate-900">Existing Synonyms ({synonyms.length})</h3>
-        {synonyms.length === 0 ? (
+        <h3 className="font-semibold text-slate-900">Existing Synonyms ({synonyms.filter((item) => item.isActive).length})</h3>
+        {synonyms.filter((item) => item.isActive).length === 0 ? (
           <p className="text-sm text-slate-500">No synonyms configured yet</p>
         ) : (
           <div className="space-y-2">
-            {synonyms.map((synonym: Synonym) => (
+            {synonyms
+              .filter((item) => item.isActive)
+              .map((synonym: Synonym) => (
               <div
-                key={synonym.id}
+                key={synonym.term}
                 className="flex items-center justify-between rounded-lg border border-slate-200 p-3"
               >
-                {editingId === synonym.id ? (
-                  <div className="flex flex-1 gap-2">
-                    <label htmlFor={`edit-terms-${synonym.id}`} className="sr-only">
-                      Edit synonym terms
-                    </label>
-                    <input
-                      id={`edit-terms-${synonym.id}`}
-                      type="text"
-                      value={editTerms}
-                      onChange={(e) => setEditTerms(e.target.value)}
-                      placeholder="Edit comma-separated terms"
-                      className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
-                    />
-                    <button
-                      onClick={() => handleUpdate(synonym.id)}
-                      disabled={updateMutation.isPending}
-                      className="rounded bg-green-600 px-3 py-1 text-xs text-white hover:bg-green-700"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className="rounded bg-slate-400 px-3 py-1 text-xs text-white hover:bg-slate-500"
-                    >
-                      Cancel
-                    </button>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-slate-900">
+                    {synonym.term} → {synonym.synonyms.join(' • ')}
                   </div>
-                ) : (
-                  <>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-slate-900">
-                        {synonym.terms.join(' • ')}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Updated {new Date(synonym.updatedAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingId(synonym.id);
-                          setEditTerms(synonym.terms.join(', '));
-                        }}
-                        className="text-xs text-blue-600 hover:text-blue-700"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteMutation.mutate(synonym.id)}
-                        disabled={deleteMutation.isPending}
-                        className="text-xs text-red-600 hover:text-red-700"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </>
-                )}
+                  <div className="text-xs text-slate-500">
+                    Created {new Date(synonym.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => deleteMutation.mutate(synonym.term)}
+                    disabled={deleteMutation.isPending}
+                    className="text-xs text-red-600 hover:text-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
