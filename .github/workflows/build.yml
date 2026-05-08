@@ -84,7 +84,8 @@ jobs:
 
       - name: Build Docker image
         run: |
+          SERVICE_LOWER=$(echo "${{ matrix.service }}" | tr '[:upper:]' '[:lower:]')
           docker build \
             -f docker/Dockerfile.${{ matrix.service }} \
-            -t nexora/${{ matrix.service }}:${{ github.sha }} \
+            -t nexora/${SERVICE_LOWER}:${{ github.sha }} \
             .
