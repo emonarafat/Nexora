@@ -263,7 +263,7 @@ test.describe("Search page", () => {
 
     await page.goto("/");
 
-    await page.getByRole("button", { name: "Nike Air Zoom Running Shoes" }).click();
+    await page.getByRole("button", { name: "Nike Air Zoom Running Shoes", exact: true }).click();
 
     await page.waitForTimeout(200);
 
@@ -311,14 +311,18 @@ test.describe("Search page", () => {
   });
 
   test("shows error state when search API fails", async ({ page }) => {
+    let requestCount = 0;
     await page.route("**/api/v1/search**", (route) => {
+      requestCount++;
       void route.fulfill({ status: 500, body: "Internal Server Error" });
     });
     await mockSuggestApi(page, makeSuggestResponse());
 
     await page.goto("/");
 
-    await expect(page.getByText("Search API unavailable. Please try again.")).toBeVisible();
+    // Wait for React Query to exhaust retries (default is 3 attempts total)
+    // and for the error state to be displayed
+    await expect(page.getByRole("alert")).toContainText("Search API unavailable", { timeout: 10000 });
   });
 
   test("price range filter is sent in search request", async ({ page }) => {

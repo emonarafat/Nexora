@@ -68,7 +68,7 @@ export function SearchPage() {
           ) : null}
 
           {searchResult.isError ? (
-            <p className="text-sm text-red-700">Search API unavailable. Please try again.</p>
+            <p role="alert" className="text-sm text-red-700">Search API unavailable. Please try again.</p>
           ) : null}
 
           {searchData ? (
