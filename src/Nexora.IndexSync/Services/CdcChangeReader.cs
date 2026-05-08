@@ -39,7 +39,7 @@ public sealed class CdcChangeReader(
         return changes;
     }
 
-    public async Task<IReadOnlyList<CdcChange>> GetFullPageAsync(int page, int size, CancellationToken ct)
+    public async Task<IReadOnlyList<CdcChange>> GetFullPageAsync(int page, int? size, CancellationToken ct)
     {
         var changes = new List<CdcChange>();
         try
@@ -49,7 +49,7 @@ public sealed class CdcChangeReader(
                 ?? throw new InvalidOperationException("MSSQL connection string not configured"));
             await conn.OpenAsync(ct);
             await using var cmd = new SqlCommand(queryBuilder.BuildFullReindexQuery(), conn);
-            var pageSize = size > 0 ? size : _fullReindexPageSize;
+            var pageSize = size is > 0 ? size.Value : _fullReindexPageSize;
             cmd.Parameters.AddWithValue("@offset", page * pageSize);
             cmd.Parameters.AddWithValue("@size", pageSize);
             await using var r = await cmd.ExecuteReaderAsync(ct);

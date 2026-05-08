@@ -11,7 +11,12 @@ public sealed class BatchCollector(IOptions<IndexSyncOptions> options)
     {
         for (var index = 0; index < items.Count; index += _batchSize)
         {
-            yield return items.Skip(index).Take(_batchSize).ToArray();
+            var count = Math.Min(_batchSize, items.Count - index);
+            var batch = new T[count];
+            for (var batchIndex = 0; batchIndex < count; batchIndex++)
+                batch[batchIndex] = items[index + batchIndex];
+
+            yield return batch;
         }
     }
 }

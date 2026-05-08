@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Nexora.IndexSync.Models;
@@ -6,6 +7,9 @@ namespace Nexora.IndexSync.Services;
 
 public sealed class SyncDeadLetterWriter(IConfiguration config, ILogger<SyncDeadLetterWriter> logger)
 {
+    private readonly SemaphoreSlim _initializationLock = new(1, 1);
+    private bool _tableInitialized;
+
     public async Task WriteAsync(IReadOnlyList<CdcChange> changes, string errorMessage, CancellationToken ct)
     {
         if (changes.Count == 0)
@@ -17,6 +21,56 @@ public sealed class SyncDeadLetterWriter(IConfiguration config, ILogger<SyncDead
                 config.GetConnectionString("MSSQL")
                 ?? throw new InvalidOperationException("MSSQL connection string not configured"));
             await conn.OpenAsync(ct);
+            await EnsureTableAsync(conn, ct);
+
+            var sql = new StringBuilder("""
+                INSERT INTO dbo.sync_dead_letter (
+                    product_id,
+                    operation,
+                    change_source,
+                    payload_json,
+                    error_message
+                )
+                VALUES
+                """);
+
+            await using var cmd = new SqlCommand();
+            cmd.Connection = conn;
+
+            for (var index = 0; index < changes.Count; index++)
+            {
+                if (index > 0)
+                    sql.AppendLine(",");
+
+                sql.Append($"(@productId{index}, @operation{index}, @changeSource{index}, @payloadJson{index}, @errorMessage{index})");
+
+                var change = changes[index];
+                cmd.Parameters.AddWithValue($"@productId{index}", change.ProductId);
+                cmd.Parameters.AddWithValue($"@operation{index}", change.Operation);
+                cmd.Parameters.AddWithValue($"@changeSource{index}", change.ChangeSource);
+                cmd.Parameters.AddWithValue($"@payloadJson{index}", JsonSerializer.Serialize(change));
+                cmd.Parameters.AddWithValue($"@errorMessage{index}", errorMessage[..Math.Min(errorMessage.Length, 4000)]);
+            }
+
+            cmd.CommandText = sql.ToString();
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogError(ex, "Failed to write {Count} change(s) to sync_dead_letter", changes.Count);
+        }
+    }
+
+    private async Task EnsureTableAsync(SqlConnection conn, CancellationToken ct)
+    {
+        if (_tableInitialized)
+            return;
+
+        await _initializationLock.WaitAsync(ct);
+        try
+        {
+            if (_tableInitialized)
+                return;
 
             const string sql = """
                 IF OBJECT_ID('dbo.sync_dead_letter', 'U') IS NULL
@@ -31,37 +85,15 @@ public sealed class SyncDeadLetterWriter(IConfiguration config, ILogger<SyncDead
                         created_at DATETIMEOFFSET NOT NULL DEFAULT SYSUTCDATETIME()
                     );
                 END;
-
-                INSERT INTO dbo.sync_dead_letter (
-                    product_id,
-                    operation,
-                    change_source,
-                    payload_json,
-                    error_message
-                )
-                VALUES (
-                    @productId,
-                    @operation,
-                    @changeSource,
-                    @payloadJson,
-                    @errorMessage
-                );
                 """;
 
-            foreach (var change in changes)
-            {
-                await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@productId", change.ProductId);
-                cmd.Parameters.AddWithValue("@operation", change.Operation);
-                cmd.Parameters.AddWithValue("@changeSource", change.ChangeSource);
-                cmd.Parameters.AddWithValue("@payloadJson", JsonSerializer.Serialize(change));
-                cmd.Parameters.AddWithValue("@errorMessage", errorMessage[..Math.Min(errorMessage.Length, 4000)]);
-                await cmd.ExecuteNonQueryAsync(ct);
-            }
+            await using var cmd = new SqlCommand(sql, conn);
+            await cmd.ExecuteNonQueryAsync(ct);
+            _tableInitialized = true;
         }
-        catch (Exception ex) when (!ct.IsCancellationRequested)
+        finally
         {
-            logger.LogError(ex, "Failed to write {Count} change(s) to sync_dead_letter", changes.Count);
+            _initializationLock.Release();
         }
     }
 }

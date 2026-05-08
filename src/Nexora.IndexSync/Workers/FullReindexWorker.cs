@@ -13,7 +13,7 @@ public sealed class FullReindexWorker(
     IndexSyncMetrics metrics,
     ILogger<FullReindexWorker> logger) : BackgroundService
 {
-    private readonly int _pageSize = Math.Max(1, options.Value.FullReindexPageSize);
+    private readonly int _fullReindexPageSize = Math.Max(1, options.Value.FullReindexPageSize);
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -40,7 +40,7 @@ public sealed class FullReindexWorker(
         int page = 0; int total = 0;
         while (!ct.IsCancellationRequested)
         {
-            var rows = await reader.GetFullPageAsync(page, _pageSize, ct);
+            var rows = await reader.GetFullPageAsync(page, _fullReindexPageSize, ct);
             if (rows.Count == 0) break;
             foreach (var batch in batchCollector.Chunk(rows))
                 await batchProcessor.ProcessAsync(batch, ct);
