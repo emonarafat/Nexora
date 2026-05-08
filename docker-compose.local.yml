@@ -60,7 +60,7 @@ services:
 
   # Valkey (Redis-compatible cache)
   valkey:
-    image: valkey/valkey:7-alpine
+    image: valkey/valkey:8-alpine
     container_name: nexora-valkey
     ports:
       - "6379:6379"
