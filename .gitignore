@@ -128,6 +128,7 @@ temp/
 *.bak
 *.backup
 *~
+*.tsbuildinfo
 
 # -------------------------
 # OS files

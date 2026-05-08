@@ -97,6 +97,26 @@ services:
     networks:
       - nexora-network
 
+  # React UI for Search + Admin surfaces
+  ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.UI
+    container_name: nexora-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - typesense
+      - postgres
+      - mssql
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexora-network
+
 volumes:
   postgres_data:
   mssql_data:
@@ -131,3 +151,6 @@ networks:
 # RabbitMQ:
 #   amqp://guest:guest@rabbitmq:5672/
 #   Management UI: http://localhost:15672 (guest/guest)
+#
+# UI:
+#   http://localhost:3000

@@ -90,6 +90,7 @@ Nexora/
 │   │   └── Program.cs
 │   ├── Nexora.IndexSync/         # Worker service: MSSQL CDC + Typesense upsert
 │   ├── Nexora.AdminAPI/          # Admin API for ranking tuning, synonyms (internal)
+│   ├── Nexora.UI/                # React + TypeScript frontend (Search + Admin shell)
 │   └── Nexora.Shared/            # Shared DTOs, constants, utilities
 ├── tests/
 │   ├── Nexora.SearchAPI.Tests/   # Unit + integration tests
@@ -101,7 +102,8 @@ Nexora/
 ├── docker/
 │   ├── Dockerfile.SearchAPI
 │   ├── Dockerfile.IndexSync
-│   └── Dockerfile.AdminAPI
+│   ├── Dockerfile.AdminAPI
+│   └── Dockerfile.UI
 └── .github/
     └── workflows/
         ├── build.yml             # CI: build, test, lint
