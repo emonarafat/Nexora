@@ -27,6 +27,7 @@ public sealed class SyncBatchProcessor(
             .ToList();
 
         var source = ResolveSource(changes);
+        var oldestChangeTimestamp = changes.Min(change => change.ChangeTimestamp);
 
         try
         {
@@ -40,7 +41,7 @@ public sealed class SyncBatchProcessor(
                 await cacheInvalidator.InvalidateAsync(ct);
 
             metrics.RecordProcessed(source, changes.Count);
-            metrics.SetLag(source, DateTimeOffset.UtcNow - changes.Min(change => change.ChangeTimestamp));
+            metrics.SetLag(source, DateTimeOffset.UtcNow - oldestChangeTimestamp);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {

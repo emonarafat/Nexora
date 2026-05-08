@@ -7,6 +7,7 @@ namespace Nexora.IndexSync.Services;
 
 public sealed class SyncDeadLetterWriter(IConfiguration config, ILogger<SyncDeadLetterWriter> logger)
 {
+    private const int MaxErrorMessageLength = 4000;
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private bool _tableInitialized;
 
@@ -49,7 +50,7 @@ public sealed class SyncDeadLetterWriter(IConfiguration config, ILogger<SyncDead
                 cmd.Parameters.AddWithValue($"@operation{index}", change.Operation);
                 cmd.Parameters.AddWithValue($"@changeSource{index}", change.ChangeSource);
                 cmd.Parameters.AddWithValue($"@payloadJson{index}", JsonSerializer.Serialize(change));
-                cmd.Parameters.AddWithValue($"@errorMessage{index}", errorMessage[..Math.Min(errorMessage.Length, 4000)]);
+                cmd.Parameters.AddWithValue($"@errorMessage{index}", errorMessage[..Math.Min(errorMessage.Length, MaxErrorMessageLength)]);
             }
 
             cmd.CommandText = sql.ToString();
@@ -72,7 +73,7 @@ public sealed class SyncDeadLetterWriter(IConfiguration config, ILogger<SyncDead
             if (_tableInitialized)
                 return;
 
-            const string sql = """
+            var sql = $"""
                 IF OBJECT_ID('dbo.sync_dead_letter', 'U') IS NULL
                 BEGIN
                     CREATE TABLE dbo.sync_dead_letter (
@@ -81,7 +82,7 @@ public sealed class SyncDeadLetterWriter(IConfiguration config, ILogger<SyncDead
                         operation NVARCHAR(32) NOT NULL,
                         change_source NVARCHAR(32) NOT NULL,
                         payload_json NVARCHAR(MAX) NOT NULL,
-                        error_message NVARCHAR(4000) NOT NULL,
+                        error_message NVARCHAR({MaxErrorMessageLength}) NOT NULL,
                         created_at DATETIMEOFFSET NOT NULL DEFAULT SYSUTCDATETIME()
                     );
                 END;

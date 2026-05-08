@@ -3,6 +3,7 @@ using Nexora.Shared.Constants;
 using Nexora.Shared.DTOs;
 using Typesense;
 using Typesense.Setup;
+using OptionsFactory = Microsoft.Extensions.Options.Options;
 
 namespace Nexora.IndexSync.Services;
 
@@ -18,7 +19,7 @@ public sealed class TypesenseUpsertClient(IConfiguration config, ILogger<Typesen
                 config["Typesense:Protocol"] ?? "http"
             )
         };
-        return new TypesenseClient(Microsoft.Extensions.Options.Options.Create(new Config(nodes, config["Typesense:ApiKey"] ?? "")), new HttpClient());
+        return new TypesenseClient(OptionsFactory.Create(new Config(nodes, config["Typesense:ApiKey"] ?? "")), new HttpClient());
     }
 
     public async Task UpsertBatchAsync(IReadOnlyList<ProductDocument> docs, CancellationToken ct)
@@ -49,7 +50,11 @@ public sealed class TypesenseUpsertClient(IConfiguration config, ILogger<Typesen
             foreach (var id in ids)
             {
                 try { await client.DeleteDocument<ProductDocument>(SearchConstants.ProductsCollection, id); }
-                catch (Exception ex) { throw new InvalidOperationException($"Delete failed for id {id}", ex); }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Delete failed for id {Id}", id);
+                    throw;
+                }
             }
         }
         catch (Exception ex)
