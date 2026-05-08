@@ -263,7 +263,7 @@ test.describe("Search page", () => {
 
     await page.goto("/");
 
-    await page.getByRole("button", { name: "Nike Air Zoom Running Shoes" }).click();
+    await page.getByRole("button", { name: "Nike Air Zoom Running Shoes", exact: true }).click();
 
     await page.waitForTimeout(200);
 
@@ -318,7 +318,7 @@ test.describe("Search page", () => {
 
     await page.goto("/");
 
-    await expect(page.getByText("Search API unavailable. Please try again.")).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText("Search API unavailable");
   });
 
   test("price range filter is sent in search request", async ({ page }) => {
