@@ -1,85 +1,148 @@
-# .gitignore for Nexora
+# =========================
+# Nexora .gitignore
+# =========================
 
-# Dependencies
-node_modules/
-packages/
-.nuget/packages/
-
+# -------------------------
 # Build outputs
+# -------------------------
 bin/
 obj/
 dist/
 build/
-*.dll
-*.exe
-*.so
-*.dylib
+out/
+publish/
 
-# IDEs
+# -------------------------
+# .NET / NuGet
+# -------------------------
+.nuget/
+packages/
+
+# Rider / VS / VSCode
+.vs/
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-.DS_Store
-*.sublime-project
-*.sublime-workspace
 
-# Test coverage
-coverage/
-*.lcov
-.nyc_output/
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 
+# Rider
+.idea/workspace.xml
+.idea/tasks.xml
+
+# VSCode optional local settings
+.vscode/settings.json
+
+# -------------------------
+# Node / Frontend
+# -------------------------
+node_modules/
+.npm/
+.pnpm-store/
+
+# Keep lock files committed
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# -------------------------
 # Logs
+# -------------------------
 *.log
 logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
-# Secrets & sensitive data
+# -------------------------
+# Test / Coverage
+# -------------------------
+coverage/
+TestResults/
+test-results/
+*.trx
+*.coverage
+*.coveragexml
+*.lcov
+.nyc_output/
+
+# -------------------------
+# Environment / Secrets
+# -------------------------
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
 .secrets/
 **/secrets.json
+
+# Keep template configs
+# Ignore only local overrides
 appsettings.Development.json
+appsettings.Local.json
 
-# OS
-Thumbs.db
-.DS_Store
-*.tmp
+# AWS / Azure credentials
+.aws/
+.azure/
 
+# -------------------------
 # Docker
+# -------------------------
 docker-compose.override.yml
-.dockerignore
 
-# Database
+# Do NOT ignore .dockerignore
+# It should be committed
+
+# -------------------------
+# Database / Local storage
+# -------------------------
 *.db
 *.sqlite
 *.sqlite3
+
 data/
+storage/
 
-# Temporary files
-tmp/
-temp/
-*.bak
-*.backup
-
-# User-specific files
-.idea/workspace.xml
-.idea/tasks.xml
-.vscode/settings.json
-
-# Package manager
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
+# -------------------------
 # Terraform
+# -------------------------
 .terraform/
 *.tfstate
 *.tfstate.*
-.terraform.lock.hcl
 crash.log
+
+# Keep lock file committed
+# .terraform.lock.hcl
+
+# -------------------------
+# Temporary files
+# -------------------------
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*~
+
+# -------------------------
+# OS files
+# -------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# -------------------------
+# Misc
+# -------------------------
+*.swp
+*.swo
+
+# -------------------------
+# Generated artifacts
+# -------------------------
+artifacts/
