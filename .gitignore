@@ -147,3 +147,7 @@ Desktop.ini
 # Generated artifacts
 # -------------------------
 artifacts/
+# UI generated artifacts
+src/Nexora.UI/playwright-report/
+src/Nexora.UI/test-results/
+src/Nexora.UI/dist/
