@@ -105,4 +105,3 @@ export function useSearch(): UseSearchReturn {
     suggestResult,
   };
 }
-
