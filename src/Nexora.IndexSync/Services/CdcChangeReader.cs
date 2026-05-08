@@ -1,10 +1,17 @@
 using Microsoft.Data.SqlClient;
 using Nexora.IndexSync.Models;
+using Nexora.IndexSync.Options;
+using Microsoft.Extensions.Options;
 
 namespace Nexora.IndexSync.Services;
 
-public sealed class CdcChangeReader(IConfiguration config, ILogger<CdcChangeReader> logger)
+public sealed class CdcChangeReader(
+    IConfiguration config,
+    CdcQueryBuilder queryBuilder,
+    IOptions<IndexSyncOptions> options,
+    ILogger<CdcChangeReader> logger)
 {
+    private readonly int _fullReindexPageSize = Math.Max(1, options.Value.FullReindexPageSize);
     private DateTimeOffset _lastPoll = DateTimeOffset.UtcNow.AddSeconds(-30);
 
     public async Task<IReadOnlyList<CdcChange>> GetChangesAsync(CancellationToken ct)
@@ -20,24 +27,7 @@ public sealed class CdcChangeReader(IConfiguration config, ILogger<CdcChangeRead
                 ?? throw new InvalidOperationException("MSSQL connection string not configured"));
             await conn.OpenAsync(ct);
 
-            const string sql = """
-                SELECT p.__$operation, p.product_id, p.product_name, p.brand_name, p.product_sku,
-                       p.product_description, p.category_name, p.category_hierarchy,
-                       p.unit_price, p.currency_code, p.color_variants, p.size_variants,
-                       p.avg_rating, p.rating_count, p.is_featured_flag, p.is_active_flag,
-                       p.merchant_id, p.created_date, p.modified_date,
-                       COALESCE(s.stock_status_code,'OUT_OF_STOCK') AS stock_status,
-                       COALESCE(s.qty_on_hand,0) AS stock_quantity
-                FROM cdc.fn_cdc_get_all_changes_dbo_products(
-                    sys.fn_cdc_map_time_to_lsn('smallest greater than or equal', @from),
-                    sys.fn_cdc_map_time_to_lsn('largest less than or equal', @to),
-                    'all') p
-                LEFT JOIN stock s ON s.product_id = p.product_id
-                WHERE p.__$operation IN (1,2,4)
-                ORDER BY p.__$seqval
-                """;
-
-            await using var cmd = new SqlCommand(sql, conn);
+            await using var cmd = new SqlCommand(queryBuilder.BuildChangesQuery(), conn);
             cmd.Parameters.AddWithValue("@from", from);
             cmd.Parameters.AddWithValue("@to", to);
             await using var r = await cmd.ExecuteReaderAsync(ct);
@@ -49,7 +39,7 @@ public sealed class CdcChangeReader(IConfiguration config, ILogger<CdcChangeRead
         return changes;
     }
 
-    public async Task<IReadOnlyList<CdcChange>> GetFullPageAsync(int page, int size, CancellationToken ct)
+    public async Task<IReadOnlyList<CdcChange>> GetFullPageAsync(int page, int? size, CancellationToken ct)
     {
         var changes = new List<CdcChange>();
         try
@@ -58,20 +48,10 @@ public sealed class CdcChangeReader(IConfiguration config, ILogger<CdcChangeRead
                 config.GetConnectionString("MSSQL")
                 ?? throw new InvalidOperationException("MSSQL connection string not configured"));
             await conn.OpenAsync(ct);
-            const string sql = """
-                SELECT 4 AS __$operation, product_id, product_name, brand_name, product_sku,
-                       product_description, category_name, category_hierarchy,
-                       unit_price, currency_code, color_variants, size_variants,
-                       avg_rating, rating_count, is_featured_flag, is_active_flag,
-                       merchant_id, created_date, modified_date,
-                       stock_status, stock_quantity
-                FROM vw_search_product_flat
-                ORDER BY product_id
-                OFFSET @offset ROWS FETCH NEXT @size ROWS ONLY
-                """;
-            await using var cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@offset", page * size);
-            cmd.Parameters.AddWithValue("@size", size);
+            await using var cmd = new SqlCommand(queryBuilder.BuildFullReindexQuery(), conn);
+            var pageSize = size is > 0 ? size.Value : _fullReindexPageSize;
+            cmd.Parameters.AddWithValue("@offset", page * pageSize);
+            cmd.Parameters.AddWithValue("@size", pageSize);
             await using var r = await cmd.ExecuteReaderAsync(ct);
             while (await r.ReadAsync(ct)) changes.Add(Map(r));
         }
@@ -82,6 +62,8 @@ public sealed class CdcChangeReader(IConfiguration config, ILogger<CdcChangeRead
     private static CdcChange Map(SqlDataReader r) => new()
     {
         Operation = r.GetInt32(0) switch { 1 => "DELETE", 2 => "INSERT", _ => "UPDATE" },
+        ChangeSource = S(r, 21) ?? "product",
+        ChangeTimestamp = r.IsDBNull(22) ? DateTimeOffset.UtcNow : r.GetDateTimeOffset(22),
         ProductId = r.GetInt32(1),
         ProductName = S(r, 2), BrandName = S(r, 3), ProductSku = S(r, 4),
         ProductDescription = S(r, 5), CategoryName = S(r, 6), CategoryHierarchy = S(r, 7),

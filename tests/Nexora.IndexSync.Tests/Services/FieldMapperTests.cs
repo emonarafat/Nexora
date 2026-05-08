@@ -53,6 +53,19 @@ public class FieldMapperTests
     }
 
     [Fact]
+    public void Map_CsvValues_TrimmedAndEmptyValuesRemoved()
+    {
+        var doc = _mapper.MapToDocument(Base() with
+        {
+            ColorVariants = " Black, , White ,,",
+            SizeVariants = " 9,10 , ,11 "
+        });
+
+        doc.Color.Should().Equal("Black", "White");
+        doc.Size.Should().Equal("9", "10", "11");
+    }
+
+    [Fact]
     public void Map_CategoryHierarchy_ParsedToArray()
     {
         var doc = _mapper.MapToDocument(Base());
@@ -85,4 +98,12 @@ public class FieldMapperTests
         var doc = _mapper.MapToDocument(Base());
         doc.CreatedAt.Should().Be(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds());
     }
+
+    [Theory]
+    [InlineData("available", SearchConstants.StockStatus.InStock)]
+    [InlineData("limited", SearchConstants.StockStatus.LowStock)]
+    [InlineData("outofstock", SearchConstants.StockStatus.OutOfStock)]
+    public void Map_StockAliases_ResolveToExpectedTypesenseValues(string sourceValue, string expected)
+        => _mapper.MapToDocument(Base() with { StockStatus = sourceValue, StockQuantity = 5 })
+            .StockStatus.Should().Be(expected);
 }

@@ -1,14 +1,18 @@
 using Nexora.IndexSync.Services;
+using Nexora.IndexSync.Options;
+using Microsoft.Extensions.Options;
 
 namespace Nexora.IndexSync.Workers;
 
 public sealed class CdcSyncWorker(
     CdcChangeReader reader,
-    FieldMapper mapper,
-    TypesenseUpsertClient upsertClient,
-    SearchApiSuggestCacheInvalidator cacheInvalidator,
+    BatchCollector batchCollector,
+    SyncBatchProcessor batchProcessor,
+    IOptions<IndexSyncOptions> options,
     ILogger<CdcSyncWorker> logger) : BackgroundService
 {
+    private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(Math.Max(1, options.Value.PollIntervalSeconds));
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         logger.LogInformation("CdcSyncWorker started");
@@ -19,19 +23,13 @@ public sealed class CdcSyncWorker(
                 var changes = await reader.GetChangesAsync(ct);
                 if (changes.Count > 0)
                 {
-                    var upserts = changes.Where(c => c.Operation != "DELETE")
-                        .Select(mapper.MapToDocument).ToList();
-                    var deletes = changes.Where(c => c.Operation == "DELETE")
-                        .Select(c => c.ProductId.ToString()).ToList();
-                    if (upserts.Count > 0) await upsertClient.UpsertBatchAsync(upserts, ct);
-                    if (deletes.Count > 0) await upsertClient.DeleteBatchAsync(deletes, ct);
-                    if (upserts.Count > 0 || deletes.Count > 0)
-                        await cacheInvalidator.InvalidateAsync(ct);
+                    foreach (var batch in batchCollector.Chunk(changes))
+                        await batchProcessor.ProcessAsync(batch, ct);
                 }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (Exception ex) { logger.LogError(ex, "CDC sync iteration failed"); }
-            await Task.Delay(TimeSpan.FromSeconds(10), ct);
+            await Task.Delay(_pollInterval, ct);
         }
     }
 }
