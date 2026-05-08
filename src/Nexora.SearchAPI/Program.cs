@@ -91,8 +91,20 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "Nexora Search API", Version = "v1" }));
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["*"])
-     .AllowAnyMethod().AllowAnyHeader()));
+{
+    var origins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+    if (builder.Environment.IsDevelopment() && (origins == null || origins.Contains("*")))
+    {
+        p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+    }
+    else
+    {
+        p.WithOrigins(origins ?? [])
+         .AllowAnyMethod()
+         .AllowAnyHeader()
+         .AllowCredentials();
+    }
+}));
 
 builder.Services.AddHealthChecks();
 
