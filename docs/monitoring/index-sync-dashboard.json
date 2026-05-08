@@ -1,0 +1,35 @@
+{
+  "title": "Nexora Index Sync",
+  "panels": [
+    {
+      "title": "Product Sync Lag",
+      "type": "timeseries",
+      "query": "search_index_sync_lag_seconds{source=\"product\"}"
+    },
+    {
+      "title": "Stock & Price Sync Lag",
+      "type": "timeseries",
+      "query": "search_index_sync_lag_seconds{source=\"stock_price\"}"
+    },
+    {
+      "title": "Sync Errors",
+      "type": "timeseries",
+      "query": "rate(search_index_sync_errors_total[5m])"
+    },
+    {
+      "title": "Sync Throughput",
+      "type": "timeseries",
+      "query": "rate(search_index_sync_processed_total[5m])"
+    }
+  ],
+  "alerts": [
+    {
+      "name": "Product sync lag > 60s",
+      "expr": "search_index_sync_lag_seconds{source=\"product\"} > 60"
+    },
+    {
+      "name": "Stock sync lag > 300s",
+      "expr": "search_index_sync_lag_seconds{source=\"stock_price\"} > 300"
+    }
+  ]
+}

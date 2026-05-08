@@ -18,7 +18,7 @@ public sealed class TypesenseUpsertClient(IConfiguration config, ILogger<Typesen
                 config["Typesense:Protocol"] ?? "http"
             )
         };
-        return new TypesenseClient(Options.Create(new Config(nodes, config["Typesense:ApiKey"] ?? "")), new HttpClient());
+        return new TypesenseClient(Microsoft.Extensions.Options.Options.Create(new Config(nodes, config["Typesense:ApiKey"] ?? "")), new HttpClient());
     }
 
     public async Task UpsertBatchAsync(IReadOnlyList<ProductDocument> docs, CancellationToken ct)
@@ -33,7 +33,11 @@ public sealed class TypesenseUpsertClient(IConfiguration config, ILogger<Typesen
                 docs.Count,
                 ImportType.Upsert);
         }
-        catch (Exception ex) { logger.LogError(ex, "Upsert batch failed ({Count} docs)", docs.Count); }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Upsert batch failed ({Count} docs)", docs.Count);
+            throw;
+        }
     }
 
     public async Task DeleteBatchAsync(IReadOnlyList<string> ids, CancellationToken ct)
@@ -45,9 +49,13 @@ public sealed class TypesenseUpsertClient(IConfiguration config, ILogger<Typesen
             foreach (var id in ids)
             {
                 try { await client.DeleteDocument<ProductDocument>(SearchConstants.ProductsCollection, id); }
-                catch (Exception ex) { logger.LogWarning(ex, "Delete failed for id {Id}", id); }
+                catch (Exception ex) { throw new InvalidOperationException($"Delete failed for id {id}", ex); }
             }
         }
-        catch (Exception ex) { logger.LogError(ex, "Delete batch setup failed"); }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Delete batch failed ({Count} ids)", ids.Count);
+            throw;
+        }
     }
 }

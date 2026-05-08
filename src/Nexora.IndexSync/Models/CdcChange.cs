@@ -3,6 +3,8 @@ namespace Nexora.IndexSync.Models;
 public record CdcChange
 {
     public string Operation { get; init; } = "UPDATE";
+    public string ChangeSource { get; init; } = "product";
+    public DateTimeOffset ChangeTimestamp { get; init; } = DateTimeOffset.UtcNow;
     public int ProductId { get; init; }
     public string? ProductName { get; init; }
     public string? BrandName { get; init; }

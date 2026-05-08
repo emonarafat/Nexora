@@ -1,14 +1,20 @@
 using Nexora.IndexSync.Services;
+using Nexora.IndexSync.Options;
+using Microsoft.Extensions.Options;
 
 namespace Nexora.IndexSync.Workers;
 
 public sealed class FullReindexWorker(
     CdcChangeReader reader,
-    FieldMapper mapper,
-    TypesenseUpsertClient upsertClient,
-    SearchApiSuggestCacheInvalidator cacheInvalidator,
+    BatchCollector batchCollector,
+    SyncBatchProcessor batchProcessor,
+    FullReindexSignal signal,
+    IOptions<IndexSyncOptions> options,
+    IndexSyncMetrics metrics,
     ILogger<FullReindexWorker> logger) : BackgroundService
 {
+    private readonly int _pageSize = Math.Max(1, options.Value.FullReindexPageSize);
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -17,7 +23,11 @@ public sealed class FullReindexWorker(
             {
                 var next = NextSundayAt2AM();
                 var delay = next - DateTimeOffset.UtcNow;
-                if (delay > TimeSpan.Zero) await Task.Delay(delay, ct);
+                if (delay > TimeSpan.Zero)
+                {
+                    var triggered = await signal.WaitAsync(delay, ct);
+                    logger.LogInformation("Full re-index starting via {Trigger}", triggered ? "manual trigger" : "scheduled trigger");
+                }
                 if (!ct.IsCancellationRequested) await ReindexAsync(ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
@@ -30,14 +40,14 @@ public sealed class FullReindexWorker(
         int page = 0; int total = 0;
         while (!ct.IsCancellationRequested)
         {
-            var rows = await reader.GetFullPageAsync(page, 1000, ct);
+            var rows = await reader.GetFullPageAsync(page, _pageSize, ct);
             if (rows.Count == 0) break;
-            await upsertClient.UpsertBatchAsync(rows.Select(mapper.MapToDocument).ToList(), ct);
+            foreach (var batch in batchCollector.Chunk(rows))
+                await batchProcessor.ProcessAsync(batch, ct);
             total += rows.Count; page++;
             logger.LogInformation("Re-indexed {Total} so far", total);
         }
-        if (total > 0)
-            await cacheInvalidator.InvalidateAsync(ct);
+        metrics.SetLag("full_reindex", TimeSpan.Zero);
         logger.LogInformation("Full re-index done: {Total}", total);
     }
 
