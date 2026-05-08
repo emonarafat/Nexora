@@ -1,26 +1,6 @@
 import { Link, Route, Routes } from "react-router-dom";
-
-function SearchPage() {
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-slate-900">Search UI</h2>
-      <p className="mt-2 text-sm text-slate-600">
-        Baseline shell for suggest, facets, and result rendering.
-      </p>
-    </section>
-  );
-}
-
-function AdminPage() {
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-slate-900">Admin Dashboard</h2>
-      <p className="mt-2 text-sm text-slate-600">
-        Baseline shell for synonyms, reindex, and ranking configuration.
-      </p>
-    </section>
-  );
-}
+import { AdminPage } from "./pages/AdminPage";
+import { SearchPage } from "./pages/SearchPage";
 
 export default function App() {
   return (
