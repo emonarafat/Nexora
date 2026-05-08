@@ -129,9 +129,10 @@ test.describe("Search page", () => {
 
     await page.goto("/");
 
-    await expect(page.getByRole("listbox", { name: "Search suggestions" })).toBeVisible();
-    await expect(page.getByText("running shoes")).toBeVisible();
-    await expect(page.getByText("running socks")).toBeVisible();
+    const suggestionsList = page.getByRole("list", { name: "Search suggestions" });
+    await expect(suggestionsList).toBeVisible();
+    await expect(suggestionsList.getByRole("button").filter({ hasText: "running shoes" })).toBeVisible();
+    await expect(suggestionsList.getByRole("button").filter({ hasText: "running socks" })).toBeVisible();
   });
 
   test("clicking a suggestion updates the search input", async ({ page }) => {
@@ -141,7 +142,7 @@ test.describe("Search page", () => {
     await page.goto("/");
 
     // Click the first suggestion
-    await page.getByRole("listbox", { name: "Search suggestions" }).getByText("running shoes").click();
+    await page.getByRole("list", { name: "Search suggestions" }).getByRole("button").filter({ hasText: "running shoes" }).click();
 
     await expect(page.getByRole("textbox", { name: "Search products" })).toHaveValue("running shoes");
   });
@@ -174,10 +175,13 @@ test.describe("Search page", () => {
 
     // Wait for initial results then check the Nike brand filter
     await expect(page.getByText("Nike (1)")).toBeVisible();
+    const filteredSearchPromise = page.waitForResponse(
+      (resp) => resp.url().includes("/api/v1/search") && resp.status() === 200,
+    );
     await page.getByLabel("Nike (1)").check();
 
     // A new search request with filter_by containing "Nike" should be sent
-    await page.waitForResponse((resp) => resp.url().includes("/api/v1/search") && resp.status() === 200);
+    await filteredSearchPromise;
 
     const filteredRequest = requests.find((url) => url.includes("filter_by") && url.includes("Nike"));
     expect(filteredRequest).toBeTruthy();
@@ -230,8 +234,8 @@ test.describe("Search page", () => {
     await expect(page.getByText("Try removing filters or using one of the suggestions.")).toBeVisible();
 
     // Suggestions rendered as chips
-    await expect(page.getByRole("button", { name: "running shoes" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "running socks" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "running shoes", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "running socks", exact: true })).toBeVisible();
   });
 
   test("clicking a zero-results suggestion updates the query", async ({ page }) => {
@@ -242,7 +246,7 @@ test.describe("Search page", () => {
     await page.goto("/");
 
     await expect(page.getByText("No results found")).toBeVisible();
-    await page.getByRole("button", { name: "running shoes" }).click();
+    await page.getByRole("button", { name: "running shoes", exact: true }).click();
     await expect(page.getByRole("textbox", { name: "Search products" })).toHaveValue("running shoes");
   });
 
