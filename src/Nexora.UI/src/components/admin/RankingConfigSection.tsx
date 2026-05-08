@@ -93,7 +93,7 @@ export function RankingConfigSection({ onAction }: RankingConfigSectionProps) {
       <div className="p-6">
         <div className="rounded-lg bg-red-50 p-4">
           <p className="text-sm text-red-800">
-            Error loading ranking config. Make sure the backend API is running at http://localhost:5000
+            Error loading ranking config. Make sure the Admin API is running at http://localhost:5001
           </p>
         </div>
       </div>

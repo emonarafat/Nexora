@@ -26,11 +26,13 @@ function toFilterBy(filters: SearchFilters): string | undefined {
   const clauses: string[] = [];
 
   if (filters.brands.length > 0) {
-    clauses.push(`brand:[${filters.brands.join(",")}]`);
+    const brandList = filters.brands.join(",");
+    clauses.push(filters.brands.length === 1 ? `brand:=${brandList}` : `brand:=[${brandList}]`);
   }
 
   if (filters.categories.length > 0) {
-    clauses.push(`category:[${filters.categories.join(",")}]`);
+    const categoryList = filters.categories.join(",");
+    clauses.push(filters.categories.length === 1 ? `category:=${categoryList}` : `category:=[${categoryList}]`);
   }
 
   if (filters.priceRange === "0-50") {

@@ -45,12 +45,12 @@ export function SearchInput({
 
           {hasSearchInput && suggestions && suggestions.length > 0 ? (
             <ul
-              role="listbox"
+              role="list"
               aria-label="Search suggestions"
               className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2 text-sm"
             >
               {suggestions.map((item) => (
-                <li key={`${item.text}-${item.category ?? "uncategorized"}`} role="option" aria-selected={false}>
+                <li key={`${item.text}-${item.category ?? "uncategorized"}`}>
                   <button
                     type="button"
                     onClick={() => onSuggestionSelect(item.text)}

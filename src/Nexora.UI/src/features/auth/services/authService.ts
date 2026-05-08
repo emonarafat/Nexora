@@ -7,8 +7,7 @@ const TOKEN_KEY = 'nexora_auth_token';
 const USER_KEY = 'nexora_auth_user';
 
 /**
- * Attempt to log in via the Admin API. Falls back to a dev-only mock when the
- * API is unavailable (i.e. when running Playwright tests with mocked routes).
+ * Attempt to log in via the Admin API.
  */
 export async function login(
   credentials: AuthCredentials,

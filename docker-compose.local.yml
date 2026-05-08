@@ -41,7 +41,7 @@ services:
 
   # Typesense for full-text search
   typesense:
-    image: typesense/typesense:26.0
+    image: typesense/typesense:27
     container_name: nexora-typesense
     environment:
       TYPESENSE_API_KEY: nexora_dev_key_change_in_prod
