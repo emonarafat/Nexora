@@ -11,8 +11,15 @@ import type {
   RankingConfig,
   RankingConfigRequest,
 } from '../types/admin';
+import { loadToken } from '../features/auth/services/authService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
+function authHeaders(): Record<string, string> {
+  const token = loadToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token.accessToken}` };
+}
 
 // ============================================================================
 // SYNONYMS
@@ -20,7 +27,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 
 export async function fetchSynonyms(): Promise<Synonym[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/synonyms`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/synonyms`, {
+      headers: authHeaders(),
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data: SynonymsResponse = await response.json();
     return data.synonyms;
@@ -34,7 +43,7 @@ export async function createSynonym(terms: string[]): Promise<Synonym> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/synonyms`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ terms } as SynonymRequest),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -49,7 +58,7 @@ export async function updateSynonym(id: string, terms: string[]): Promise<Synony
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/synonyms/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ terms } as SynonymRequest),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -64,6 +73,7 @@ export async function deleteSynonym(id: string): Promise<void> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/synonyms/${id}`, {
       method: 'DELETE',
+      headers: authHeaders(),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
   } catch (error) {
@@ -80,7 +90,7 @@ export async function triggerReindex(fullReindex: boolean = false): Promise<Rein
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/reindex`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ triggerFullReindex: fullReindex } as ReindexRequest),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -93,7 +103,9 @@ export async function triggerReindex(fullReindex: boolean = false): Promise<Rein
 
 export async function getReindexStatus(jobId: string): Promise<ReindexJob> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/reindex/${jobId}`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/reindex/${jobId}`, {
+      headers: authHeaders(),
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   } catch (error) {
@@ -108,7 +120,9 @@ export async function getReindexStatus(jobId: string): Promise<ReindexJob> {
 
 export async function fetchRankingConfig(): Promise<RankingConfig> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/ranking/config`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/ranking/config`, {
+      headers: authHeaders(),
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   } catch (error) {
@@ -121,7 +135,7 @@ export async function updateRankingConfig(config: RankingConfigRequest): Promise
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/ranking/config`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(config),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
