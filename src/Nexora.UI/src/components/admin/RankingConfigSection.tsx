@@ -7,20 +7,24 @@ import type { RankingConfigRequest } from '../../types/admin';
 
 const WEIGHT_CONSTRAINTS = {
   textScoreWeight: { min: 0, max: 1, step: 0.05 },
-  ctrWeight: { min: 0, max: 1, step: 0.05 },
-  conversionWeight: { min: 0, max: 1, step: 0.05 },
-  recencyWeight: { min: 0, max: 1, step: 0.05 },
+  availabilityWeight: { min: 0, max: 1, step: 0.05 },
+  ratingWeight: { min: 0, max: 1, step: 0.05 },
   popularityWeight: { min: 0, max: 1, step: 0.05 },
 };
 
-export function RankingConfigSection() {
+type AdminActionStatus = 'success' | 'error';
+
+interface RankingConfigSectionProps {
+  onAction: (action: string, target: string, status: AdminActionStatus) => void;
+}
+
+export function RankingConfigSection({ onAction }: RankingConfigSectionProps) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<RankingConfigRequest>({
     textScoreWeight: 0.4,
-    ctrWeight: 0.2,
-    conversionWeight: 0.15,
-    recencyWeight: 0.1,
-    popularityWeight: 0.15,
+    availabilityWeight: 0.2,
+    ratingWeight: 0.2,
+    popularityWeight: 0.2,
   });
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -36,6 +40,10 @@ export function RankingConfigSection() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rankingConfig'] });
       setHasChanges(false);
+      onAction('Update ranking config', 'ranking weights', 'success');
+    },
+    onError: () => {
+      onAction('Update ranking config', 'ranking weights', 'error');
     },
   });
 
@@ -44,9 +52,8 @@ export function RankingConfigSection() {
     if (config) {
       setFormData({
         textScoreWeight: config.textScoreWeight,
-        ctrWeight: config.ctrWeight,
-        conversionWeight: config.conversionWeight,
-        recencyWeight: config.recencyWeight,
+        availabilityWeight: config.availabilityWeight,
+        ratingWeight: config.ratingWeight,
         popularityWeight: config.popularityWeight,
       });
     }
@@ -64,9 +71,8 @@ export function RankingConfigSection() {
   const getTotalWeight = () => {
     return (
       formData.textScoreWeight +
-      formData.ctrWeight +
-      formData.conversionWeight +
-      formData.recencyWeight +
+      formData.availabilityWeight +
+      formData.ratingWeight +
       formData.popularityWeight
     ).toFixed(2);
   };
@@ -101,14 +107,14 @@ export function RankingConfigSection() {
         <div className="rounded-lg bg-slate-50 p-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-slate-600">Current Version</p>
-              <p className="font-semibold text-slate-900">{config.version}</p>
-            </div>
-            <div>
               <p className="text-slate-600">Last Updated</p>
               <p className="font-semibold text-slate-900">
-                {new Date(config.lastUpdatedAt).toLocaleDateString()}
+                {config.lastUpdatedAt ? new Date(config.lastUpdatedAt).toLocaleDateString() : 'N/A'}
               </p>
+            </div>
+            <div>
+              <p className="text-slate-600">Updated By</p>
+              <p className="font-semibold text-slate-900">{config.lastUpdatedBy ?? 'System'}</p>
             </div>
           </div>
         </div>
@@ -136,60 +142,42 @@ export function RankingConfigSection() {
           <p className="text-xs text-slate-600">Full-text search relevance score</p>
         </div>
 
-        {/* CTR Weight */}
+        {/* Availability Weight */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-900">CTR Weight</label>
-            <span className="text-sm font-semibold text-blue-600">{formData.ctrWeight.toFixed(2)}</span>
+            <label className="text-sm font-medium text-slate-900">Availability Weight</label>
+            <span className="text-sm font-semibold text-blue-600">{formData.availabilityWeight.toFixed(2)}</span>
           </div>
           <input
             type="range"
-            min={WEIGHT_CONSTRAINTS.ctrWeight.min}
-            max={WEIGHT_CONSTRAINTS.ctrWeight.max}
-            step={WEIGHT_CONSTRAINTS.ctrWeight.step}
-            value={formData.ctrWeight}
-            onChange={(e) => handleChange('ctrWeight', parseFloat(e.target.value))}
+            min={WEIGHT_CONSTRAINTS.availabilityWeight.min}
+            max={WEIGHT_CONSTRAINTS.availabilityWeight.max}
+            step={WEIGHT_CONSTRAINTS.availabilityWeight.step}
+            value={formData.availabilityWeight}
+            onChange={(e) => handleChange('availabilityWeight', parseFloat(e.target.value))}
             className="w-full"
           />
-          <p className="text-xs text-slate-600">Click-Through Rate (popularity from clicks)</p>
+          <p className="text-xs text-slate-600">In-stock products receive a proportional boost</p>
         </div>
 
-        {/* Conversion Weight */}
+        {/* Rating Weight */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-900">Conversion Weight</label>
+            <label className="text-sm font-medium text-slate-900">Rating Weight</label>
             <span className="text-sm font-semibold text-blue-600">
-              {formData.conversionWeight.toFixed(2)}
+              {formData.ratingWeight.toFixed(2)}
             </span>
           </div>
           <input
             type="range"
-            min={WEIGHT_CONSTRAINTS.conversionWeight.min}
-            max={WEIGHT_CONSTRAINTS.conversionWeight.max}
-            step={WEIGHT_CONSTRAINTS.conversionWeight.step}
-            value={formData.conversionWeight}
-            onChange={(e) => handleChange('conversionWeight', parseFloat(e.target.value))}
+            min={WEIGHT_CONSTRAINTS.ratingWeight.min}
+            max={WEIGHT_CONSTRAINTS.ratingWeight.max}
+            step={WEIGHT_CONSTRAINTS.ratingWeight.step}
+            value={formData.ratingWeight}
+            onChange={(e) => handleChange('ratingWeight', parseFloat(e.target.value))}
             className="w-full"
           />
-          <p className="text-xs text-slate-600">Purchase conversion rate</p>
-        </div>
-
-        {/* Recency Weight */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-900">Recency Weight</label>
-            <span className="text-sm font-semibold text-blue-600">{formData.recencyWeight.toFixed(2)}</span>
-          </div>
-          <input
-            type="range"
-            min={WEIGHT_CONSTRAINTS.recencyWeight.min}
-            max={WEIGHT_CONSTRAINTS.recencyWeight.max}
-            step={WEIGHT_CONSTRAINTS.recencyWeight.step}
-            value={formData.recencyWeight}
-            onChange={(e) => handleChange('recencyWeight', parseFloat(e.target.value))}
-            className="w-full"
-          />
-          <p className="text-xs text-slate-600">Recently added/updated products boost</p>
+          <p className="text-xs text-slate-600">Higher-rated products receive stronger ranking influence</p>
         </div>
 
         {/* Popularity Weight */}
@@ -241,9 +229,8 @@ export function RankingConfigSection() {
             if (config) {
               setFormData({
                 textScoreWeight: config.textScoreWeight,
-                ctrWeight: config.ctrWeight,
-                conversionWeight: config.conversionWeight,
-                recencyWeight: config.recencyWeight,
+                availabilityWeight: config.availabilityWeight,
+                ratingWeight: config.ratingWeight,
                 popularityWeight: config.popularityWeight,
               });
               setHasChanges(false);
@@ -260,8 +247,8 @@ export function RankingConfigSection() {
       <div className="space-y-2 rounded-lg bg-blue-50 p-4 border border-blue-200">
         <h4 className="text-sm font-semibold text-blue-900">ℹ️ Ranking Formula</h4>
         <p className="text-xs text-blue-800">
-          Final Score = (Text Score × {formData.textScoreWeight.toFixed(2)}) + (CTR × {formData.ctrWeight.toFixed(2)}) +
-          (Conversion × {formData.conversionWeight.toFixed(2)}) + (Recency × {formData.recencyWeight.toFixed(2)}) + (Popularity × {formData.popularityWeight.toFixed(2)})
+          Final Score = (Text Score × {formData.textScoreWeight.toFixed(2)}) + (Availability × {formData.availabilityWeight.toFixed(2)}) +
+          (Rating × {formData.ratingWeight.toFixed(2)}) + (Popularity × {formData.popularityWeight.toFixed(2)})
         </p>
         <p className="text-xs text-blue-800">Adjust weights to optimize ranking for your business objectives.</p>
       </div>

@@ -1,39 +1,62 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { triggerReindex, getReindexStatus } from '../../services/adminApi';
 import type { ReindexJob } from '../../types/admin';
 
-export function ReindexSection() {
+type AdminActionStatus = 'success' | 'error';
+
+interface ReindexSectionProps {
+  onAction: (action: string, target: string, status: AdminActionStatus) => void;
+}
+
+function isTerminalStatus(status?: ReindexJob['status']): boolean {
+  return status === 'completed' || status === 'failed';
+}
+
+export function ReindexSection({ onAction }: ReindexSectionProps) {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  const [isFullReindex, setIsFullReindex] = useState(false);
+  const [hasRequestedStatus, setHasRequestedStatus] = useState(false);
+  const [latestTriggeredJob, setLatestTriggeredJob] = useState<ReindexJob | null>(null);
 
   // Fetch current job status
-  const { data: jobStatus } = useQuery<ReindexJob | null>({
+  const { data: jobStatus, error: statusError } = useQuery<
+    ReindexJob,
+    Error,
+    ReindexJob,
+    ['reindexStatus', string | null]
+  >({
     queryKey: ['reindexStatus', currentJobId],
-    queryFn: () => (currentJobId ? getReindexStatus(currentJobId) : Promise.resolve(null)),
-    enabled: !!currentJobId,
-    refetchInterval: currentJobId ? 2000 : false, // Poll every 2 seconds while job is active
+    queryFn: () => getReindexStatus(currentJobId ?? undefined),
+    enabled: hasRequestedStatus,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status || isTerminalStatus(status)) return false;
+      return 2000;
+    },
   });
 
   // Trigger reindex mutation
   const triggerMutation = useMutation({
-    mutationFn: (fullReindex: boolean) => triggerReindex(fullReindex),
+    mutationFn: triggerReindex,
     onSuccess: (data) => {
-      setCurrentJobId(data.jobId);
+      setCurrentJobId(data.jobId ?? null);
+      setLatestTriggeredJob(data);
+      setHasRequestedStatus(true);
+      onAction('Trigger reindex', data.jobId ?? 'current index', 'success');
+    },
+    onError: () => {
+      onAction('Trigger reindex', 'current index', 'error');
     },
   });
 
-  // Auto-refetch when job completes
-  useEffect(() => {
-    if (jobStatus?.status === 'completed' || jobStatus?.status === 'failed') {
-      // Job is done, stop polling
-    }
-  }, [jobStatus?.status]);
+  const statusToRender = jobStatus ?? latestTriggeredJob;
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: ReindexJob['status']) => {
     switch (status) {
+      case 'accepted':
+        return 'bg-slate-50 text-slate-800 border-slate-200';
       case 'pending':
         return 'bg-yellow-50 text-yellow-800 border-yellow-200';
       case 'running':
@@ -47,9 +70,9 @@ export function ReindexSection() {
     }
   };
 
-  const getProgressPercentage = (job: ReindexJob | null) => {
-    if (!job || job.totalDocuments === 0) return 0;
-    return Math.round((job.documentsProcessed / job.totalDocuments) * 100);
+  const getProgressPercentage = (job: ReindexJob) => {
+    if (!job.totalDocuments || job.totalDocuments === 0) return 0;
+    return Math.round(((job.documentsProcessed ?? 0) / job.totalDocuments) * 100);
   };
 
   return (
@@ -58,84 +81,69 @@ export function ReindexSection() {
       <div className="space-y-4 rounded-lg bg-slate-50 p-4">
         <h3 className="font-semibold text-slate-900">Trigger Reindex</h3>
 
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="fullReindex"
-            checked={isFullReindex}
-            onChange={(e) => setIsFullReindex(e.target.checked)}
-            className="rounded border-slate-300"
-          />
-          <label htmlFor="fullReindex" className="text-sm text-slate-700">
-            Full reindex (clears existing index and rebuilds from scratch)
-          </label>
-        </div>
-
         <button
-          onClick={() => triggerMutation.mutate(isFullReindex)}
-          disabled={
-            triggerMutation.isPending ||
-            (jobStatus?.status === 'running' || jobStatus?.status === 'pending')
-          }
+          onClick={() => triggerMutation.mutate()}
+          disabled={triggerMutation.isPending || statusToRender?.status === 'running' || statusToRender?.status === 'pending'}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-slate-300"
         >
           {triggerMutation.isPending ? 'Starting...' : 'Trigger Reindex'}
         </button>
 
         <p className="text-xs text-slate-600">
-          {isFullReindex
-            ? 'Full reindex will replace the entire search index. This may take several minutes.'
-            : 'Incremental reindex will sync changes since the last run.'}
+          Reindexing syncs the catalog into search storage and may take several minutes.
         </p>
       </div>
 
       {/* Job Status */}
-      {jobStatus && (
-        <div className={`rounded-lg border p-4 ${getStatusColor(jobStatus.status)}`}>
+      {statusToRender && (
+        <div className={`rounded-lg border p-4 ${getStatusColor(statusToRender.status)}`}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold">Job ID: {jobStatus.jobId}</h4>
+              <h4 className="font-semibold">Job ID: {statusToRender.jobId ?? 'Pending assignment'}</h4>
               <span className="rounded-full bg-white/50 px-3 py-1 text-xs font-medium">
-                {jobStatus.status.toUpperCase()}
+                {statusToRender.status.toUpperCase()}
               </span>
             </div>
+            {statusToRender.message ? <p className="text-xs">{statusToRender.message}</p> : null}
 
             {/* Progress Bar */}
-            {(jobStatus.status === 'running' || jobStatus.status === 'pending') && (
+            {(statusToRender.status === 'running' || statusToRender.status === 'pending') && (
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
                   <span>Progress</span>
                   <span>
-                    {jobStatus.documentsProcessed} / {jobStatus.totalDocuments}
+                    {statusToRender.documentsProcessed ?? 0} / {statusToRender.totalDocuments ?? 0}
                   </span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-white/30">
                   <div
                     className="h-full bg-white/70 transition-all duration-500"
-                    style={{ width: `${getProgressPercentage(jobStatus)}%` }}
+                    style={{ width: `${getProgressPercentage(statusToRender)}%` }}
                   />
                 </div>
               </div>
             )}
 
             {/* Completion Info */}
-            {(jobStatus.status === 'completed' || jobStatus.status === 'failed') && (
+            {isTerminalStatus(statusToRender.status) && (
               <div className="space-y-1 text-xs">
-                <p>
-                  <strong>Started:</strong> {new Date(jobStatus.startedAt).toLocaleString()}
-                </p>
-                {jobStatus.completedAt && (
+                {statusToRender.startedAt ? (
                   <p>
-                    <strong>Completed:</strong> {new Date(jobStatus.completedAt).toLocaleString()}
+                    <strong>Started:</strong> {new Date(statusToRender.startedAt).toLocaleString()}
+                  </p>
+                ) : null}
+                {statusToRender.completedAt && (
+                  <p>
+                    <strong>Completed:</strong> {new Date(statusToRender.completedAt).toLocaleString()}
                   </p>
                 )}
                 <p>
-                  <strong>Documents Processed:</strong> {jobStatus.documentsProcessed} /{' '}
-                  {jobStatus.totalDocuments}
+                  <strong>Documents Processed:</strong> {statusToRender.documentsProcessed ?? 0} /{' '}
+                  {statusToRender.totalDocuments ?? 0}
                 </p>
-                {jobStatus.errorMessage && (
+                {statusToRender.errorMessage && (
                   <p className="text-red-700">
-                    <strong>Error:</strong> {jobStatus.errorMessage}
+                    <strong>Error:</strong> {statusToRender.errorMessage}
                   </p>
                 )}
               </div>
@@ -144,7 +152,13 @@ export function ReindexSection() {
         </div>
       )}
 
-      {!jobStatus && (
+      {statusError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Unable to load reindex status right now.
+        </div>
+      ) : null}
+
+      {!statusToRender && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center">
           <p className="text-sm text-slate-600">No active reindex job. Trigger one to get started.</p>
         </div>

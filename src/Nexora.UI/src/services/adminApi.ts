@@ -5,15 +5,14 @@
 import type {
   Synonym,
   SynonymRequest,
-  SynonymsResponse,
   ReindexJob,
-  ReindexRequest,
   RankingConfig,
   RankingConfigRequest,
 } from '../types/admin';
 import { loadToken } from '../features/auth/services/authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const ADMIN_API_BASE_URL =
+  (import.meta.env.VITE_ADMIN_API_BASE_URL as string | undefined) ?? 'http://localhost:5001';
 
 function authHeaders(): Record<string, string> {
   const token = loadToken();
@@ -26,92 +25,76 @@ function authHeaders(): Record<string, string> {
 // ============================================================================
 
 export async function fetchSynonyms(): Promise<Synonym[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/synonyms`, {
-      headers: authHeaders(),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data: SynonymsResponse = await response.json();
-    return data.synonyms;
-  } catch (error) {
-    console.error('Failed to fetch synonyms:', error);
-    throw error;
-  }
+  const response = await fetch(`${ADMIN_API_BASE_URL}/api/v1/admin/synonyms/`, {
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json() as Promise<Synonym[]>;
 }
 
-export async function createSynonym(terms: string[]): Promise<Synonym> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/synonyms`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ terms } as SynonymRequest),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  } catch (error) {
-    console.error('Failed to create synonym:', error);
-    throw error;
-  }
+export async function createSynonym(term: string, synonyms: string[]): Promise<void> {
+  const response = await fetch(`${ADMIN_API_BASE_URL}/api/v1/admin/synonyms/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ term, synonyms } satisfies SynonymRequest),
+  });
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
 
-export async function updateSynonym(id: string, terms: string[]): Promise<Synonym> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/synonyms/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ terms } as SynonymRequest),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  } catch (error) {
-    console.error('Failed to update synonym:', error);
-    throw error;
-  }
-}
-
-export async function deleteSynonym(id: string): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/synonyms/${id}`, {
+export async function deleteSynonym(term: string): Promise<void> {
+  const response = await fetch(
+    `${ADMIN_API_BASE_URL}/api/v1/admin/synonyms/${encodeURIComponent(term)}`,
+    {
       method: 'DELETE',
       headers: authHeaders(),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  } catch (error) {
-    console.error('Failed to delete synonym:', error);
-    throw error;
-  }
+    },
+  );
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
 
 // ============================================================================
 // REINDEX
 // ============================================================================
 
-export async function triggerReindex(fullReindex: boolean = false): Promise<ReindexJob> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/reindex`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ triggerFullReindex: fullReindex } as ReindexRequest),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  } catch (error) {
-    console.error('Failed to trigger reindex:', error);
-    throw error;
+export async function triggerReindex(): Promise<ReindexJob> {
+  const response = await fetch(`${ADMIN_API_BASE_URL}/api/v1/admin/reindex`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  const data = (await response.json()) as {
+    status?: string;
+    Status?: string;
+    message?: string;
+    Message?: string;
+    jobId?: string;
+  };
+
+  const rawStatus = data.status ?? data.Status;
+  if (!rawStatus) {
+    console.warn('Reindex trigger response is missing status. Falling back to "accepted".', data);
   }
+
+  return {
+    jobId: data.jobId,
+    status: (rawStatus ?? 'accepted').toLowerCase() as ReindexJob['status'],
+    message: data.message ?? data.Message,
+  };
 }
 
-export async function getReindexStatus(jobId: string): Promise<ReindexJob> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/reindex/${jobId}`, {
-      headers: authHeaders(),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  } catch (error) {
-    console.error('Failed to fetch reindex status:', error);
-    throw error;
-  }
+export async function getReindexStatus(jobId?: string): Promise<ReindexJob> {
+  const suffix = jobId ? `?jobId=${encodeURIComponent(jobId)}` : '';
+  const response = await fetch(`${ADMIN_API_BASE_URL}/api/v1/admin/reindex/status${suffix}`, {
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json() as Promise<ReindexJob>;
 }
 
 // ============================================================================
@@ -119,29 +102,21 @@ export async function getReindexStatus(jobId: string): Promise<ReindexJob> {
 // ============================================================================
 
 export async function fetchRankingConfig(): Promise<RankingConfig> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/ranking/config`, {
-      headers: authHeaders(),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  } catch (error) {
-    console.error('Failed to fetch ranking config:', error);
-    throw error;
-  }
+  const response = await fetch(`${ADMIN_API_BASE_URL}/api/v1/admin/ranking-config`, {
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json() as Promise<RankingConfig>;
 }
 
 export async function updateRankingConfig(config: RankingConfigRequest): Promise<RankingConfig> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/ranking/config`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(config),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  } catch (error) {
-    console.error('Failed to update ranking config:', error);
-    throw error;
-  }
+  const response = await fetch(`${ADMIN_API_BASE_URL}/api/v1/admin/ranking-config`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(config),
+  });
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json() as Promise<RankingConfig>;
 }
