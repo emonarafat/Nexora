@@ -11,7 +11,7 @@ on:
       - main
 
 env:
-  DOTNET_VERSION: '9.0.x'
+  DOTNET_VERSION: '10.0.x'
 
 jobs:
   build-and-test:
@@ -19,6 +19,8 @@ jobs:
 
     permissions:
       contents: read
+      checks: write
+      actions: read
 
     steps:
       - name: Checkout
@@ -28,7 +30,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          cache: true
 
       - name: Restore dependencies
         run: dotnet restore Nexora.slnx
