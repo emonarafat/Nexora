@@ -107,11 +107,11 @@ export function RankingConfigSection({ onAction }: RankingConfigSectionProps) {
         <div className="rounded-lg bg-slate-50 p-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-               <p className="text-slate-600">Last Updated</p>
-               <p className="font-semibold text-slate-900">
-                 {config.lastUpdatedAt ? new Date(config.lastUpdatedAt).toLocaleDateString() : 'N/A'}
-               </p>
-             </div>
+              <p className="text-slate-600">Last Updated</p>
+              <p className="font-semibold text-slate-900">
+                {config.lastUpdatedAt ? new Date(config.lastUpdatedAt).toLocaleDateString() : 'N/A'}
+              </p>
+            </div>
             <div>
               <p className="text-slate-600">Updated By</p>
               <p className="font-semibold text-slate-900">{config.lastUpdatedBy ?? 'System'}</p>

@@ -75,9 +75,14 @@ export async function triggerReindex(): Promise<ReindexJob> {
     jobId?: string;
   };
 
+  const rawStatus = data.status ?? data.Status;
+  if (!rawStatus) {
+    console.warn('Reindex trigger response is missing status. Falling back to "accepted".', data);
+  }
+
   return {
     jobId: data.jobId,
-    status: (data.status ?? data.Status ?? 'accepted').toLowerCase() as ReindexJob['status'],
+    status: (rawStatus ?? 'accepted').toLowerCase() as ReindexJob['status'],
     message: data.message ?? data.Message,
   };
 }

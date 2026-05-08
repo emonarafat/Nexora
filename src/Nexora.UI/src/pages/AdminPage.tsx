@@ -23,7 +23,7 @@ export function AdminPage() {
   const handleAction = (action: string, target: string, status: AdminActionStatus) => {
     setActions((previous) => [
       {
-        id: `${Date.now()}-${previous.length}`,
+        id: crypto.randomUUID(),
         action,
         target,
         status,

@@ -21,12 +21,17 @@ export function ReindexSection({ onAction }: ReindexSectionProps) {
   const [latestTriggeredJob, setLatestTriggeredJob] = useState<ReindexJob | null>(null);
 
   // Fetch current job status
-  const { data: jobStatus, error: statusError } = useQuery<ReindexJob>({
+  const { data: jobStatus, error: statusError } = useQuery<
+    ReindexJob,
+    Error,
+    ReindexJob,
+    ['reindexStatus', string | null]
+  >({
     queryKey: ['reindexStatus', currentJobId],
     queryFn: () => getReindexStatus(currentJobId ?? undefined),
     enabled: hasRequestedStatus,
     refetchInterval: (query) => {
-      const status = (query.state.data as ReindexJob | undefined)?.status;
+      const status = query.state.data?.status;
       if (!status || isTerminalStatus(status)) return false;
       return 2000;
     },
@@ -94,7 +99,7 @@ export function ReindexSection({ onAction }: ReindexSectionProps) {
         <div className={`rounded-lg border p-4 ${getStatusColor(statusToRender.status)}`}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold">Job ID: {statusToRender.jobId ?? 'Not provided'}</h4>
+              <h4 className="font-semibold">Job ID: {statusToRender.jobId ?? 'Pending assignment'}</h4>
               <span className="rounded-full bg-white/50 px-3 py-1 text-xs font-medium">
                 {statusToRender.status.toUpperCase()}
               </span>

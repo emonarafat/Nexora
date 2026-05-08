@@ -18,6 +18,7 @@ interface SynonymsSectionProps {
 export function SynonymsSection({ onAction }: SynonymsSectionProps) {
   const queryClient = useQueryClient();
   const [newTerms, setNewTerms] = useState('');
+  const [createInputError, setCreateInputError] = useState<string | null>(null);
 
   // Fetch synonyms
   const { data: synonyms = [], isLoading, error } = useQuery({
@@ -31,6 +32,7 @@ export function SynonymsSection({ onAction }: SynonymsSectionProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['synonyms'] });
       setNewTerms('');
+      setCreateInputError(null);
       onAction('Create synonym', 'synonyms list', 'success');
     },
     onError: () => {
@@ -56,11 +58,17 @@ export function SynonymsSection({ onAction }: SynonymsSectionProps) {
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
-    if (terms.length === 0) return;
+    if (terms.length < 2) {
+      setCreateInputError('Enter at least two terms: canonical term first, followed by synonyms.');
+      return;
+    }
 
     const [term, ...synonyms] = terms;
-    createMutation.mutate({ term, synonyms: synonyms.length > 0 ? synonyms : [term] });
+    setCreateInputError(null);
+    createMutation.mutate({ term, synonyms });
   };
+
+  const activeSynonyms = synonyms.filter((item) => item.isActive);
 
   if (isLoading) {
     return (
@@ -87,7 +95,9 @@ export function SynonymsSection({ onAction }: SynonymsSectionProps) {
       {/* Add New Synonym */}
       <div className="space-y-3 rounded-lg bg-slate-50 p-4">
         <h3 className="font-semibold text-slate-900">Add New Synonym Group</h3>
-        <p className="text-xs text-slate-600">Separate terms with commas (e.g., "running shoe, sneaker, trainer")</p>
+        <p className="text-xs text-slate-600">
+          Enter comma-separated terms (e.g., "running shoe, sneaker, trainer"), with canonical term first and at least one synonym after it.
+        </p>
         <div className="flex gap-2">
           <label htmlFor="new-synonym-terms" className="sr-only">
             Enter new synonym terms
@@ -96,7 +106,10 @@ export function SynonymsSection({ onAction }: SynonymsSectionProps) {
             id="new-synonym-terms"
             type="text"
             value={newTerms}
-            onChange={(e) => setNewTerms(e.target.value)}
+            onChange={(e) => {
+              setNewTerms(e.target.value);
+              if (createInputError) setCreateInputError(null);
+            }}
             placeholder="Enter comma-separated synonym terms"
             aria-label="Enter comma-separated synonym terms"
             className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
@@ -109,18 +122,17 @@ export function SynonymsSection({ onAction }: SynonymsSectionProps) {
             {createMutation.isPending ? 'Adding...' : 'Add'}
           </button>
         </div>
+        {createInputError ? <p className="text-xs text-red-700">{createInputError}</p> : null}
       </div>
 
       {/* Synonyms List */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-slate-900">Existing Synonyms ({synonyms.filter((item) => item.isActive).length})</h3>
-        {synonyms.filter((item) => item.isActive).length === 0 ? (
+        <h3 className="font-semibold text-slate-900">Existing Synonyms ({activeSynonyms.length})</h3>
+        {activeSynonyms.length === 0 ? (
           <p className="text-sm text-slate-500">No synonyms configured yet</p>
         ) : (
           <div className="space-y-2">
-            {synonyms
-              .filter((item) => item.isActive)
-              .map((synonym: Synonym) => (
+            {activeSynonyms.map((synonym: Synonym) => (
               <div
                 key={synonym.term}
                 className="flex items-center justify-between rounded-lg border border-slate-200 p-3"
