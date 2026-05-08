@@ -151,3 +151,5 @@ artifacts/
 src/Nexora.UI/playwright-report/
 src/Nexora.UI/test-results/
 src/Nexora.UI/dist/
+
+.fake
