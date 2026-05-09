@@ -4,7 +4,16 @@ namespace Nexora.SearchAPI.Pipeline;
 
 public sealed partial class QuerySanitizer
 {
-    [GeneratedRegex(@"(SELECT\s|INSERT\s|UPDATE\s|DELETE\s|DROP\s|UNION\s|EXEC\s|<script|javascript:|onerror\s*=|onload\s*=|--\s|/\*)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        // Keep this conservative: prefer matching clearly malicious combinations over single keywords.
+        @"(<script|javascript:|onerror\s*=|onload\s*=|--|/\*|\*/|" +
+        @"\bselect\b\s+.*\bfrom\b|" +
+        @"\bdrop\s+table\b|\bunion\s+select\b|\bexec\s*\(|\bxp_cmdshell\b|" +
+        @"'\s*or\s*'?\d+'?\s*=\s*'?\d+'?|" +
+        @"(;|&&|\|\|)\s*(cat|curl|wget|nc|rm|sh|bash|powershell)\b|" +
+        @"\|\s*(cat|curl|wget|nc|sh|bash|powershell)\b|" +
+        @"\$\(|`)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex InjectionPattern();
 
     [GeneratedRegex(@"[\x00-\x1F\x7F]")]

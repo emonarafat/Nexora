@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Nexora.AdminAPI.Features.ReIndex;
 using Nexora.AdminAPI.Features.Synonyms;
 
@@ -10,11 +11,23 @@ builder.Services.AddHttpClient("IndexSync", c => c.Timeout = TimeSpan.FromSecond
 builder.Services.AddNpgsqlDataSource(
     builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException("Postgres connection string not configured"));
+
+// Phase 1.10: Rate limiting for admin endpoints
+builder.Services.AddRateLimiter(o =>
+    o.AddSlidingWindowLimiter("AdminLimit", l =>
+    {
+        l.Window = TimeSpan.FromMinutes(1);
+        l.SegmentsPerWindow = 6;
+        l.PermitLimit = 30;
+        l.QueueLimit = 0;
+    }));
+
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapSynonymEndpoints();
 app.MapReIndexEndpoints();
 app.MapHealthChecks("/health");

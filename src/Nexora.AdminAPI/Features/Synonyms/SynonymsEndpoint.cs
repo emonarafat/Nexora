@@ -7,7 +7,9 @@ public static class SynonymEndpoints
 {
     public static IEndpointRouteBuilder MapSynonymEndpoints(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/v1/admin/synonyms").WithTags("Synonyms");
+        var g = app.MapGroup("/api/v1/admin/synonyms")
+            .WithTags("Synonyms")
+            .RequireRateLimiting("AdminLimit");
         g.MapGet("/", GetAsync).WithSummary("List synonyms");
         g.MapPost("/", CreateAsync).WithSummary("Create synonym mapping");
         g.MapDelete("/{term}", DeleteAsync).WithSummary("Delete synonym mapping");
