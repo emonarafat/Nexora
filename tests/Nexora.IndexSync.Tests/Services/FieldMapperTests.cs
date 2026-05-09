@@ -106,4 +106,47 @@ public class FieldMapperTests
     public void Map_StockAliases_ResolveToExpectedTypesenseValues(string sourceValue, string expected)
         => _mapper.MapToDocument(Base() with { StockStatus = sourceValue, StockQuantity = 5 })
             .StockStatus.Should().Be(expected);
+
+    [Theory]
+    [InlineData("INSTOCK", SearchConstants.StockStatus.InStock)]
+    [InlineData("LOWSTOCK", SearchConstants.StockStatus.LowStock)]
+    [InlineData("UNAVAILABLE", SearchConstants.StockStatus.OutOfStock)]
+    public void Map_UpperCaseStockAliases_ResolveCorrectly(string sourceValue, string expected)
+        => _mapper.MapToDocument(Base() with { StockStatus = sourceValue, StockQuantity = 5 })
+            .StockStatus.Should().Be(expected);
+
+    [Fact]
+    public void Map_UnknownStockStatusWithPositiveQty_ReturnsInStock()
+        => _mapper.MapToDocument(Base() with { StockStatus = "UNKNOWN", StockQuantity = 5 })
+            .StockStatus.Should().Be(SearchConstants.StockStatus.InStock);
+
+    [Fact]
+    public void Map_UnknownStockStatusWithZeroQty_ReturnsOutOfStock()
+        => _mapper.MapToDocument(Base() with { StockStatus = "UNKNOWN", StockQuantity = 0 })
+            .StockStatus.Should().Be(SearchConstants.StockStatus.OutOfStock);
+
+    [Fact]
+    public void Map_NullCategoryHierarchy_ReturnsEmptyArray()
+        => _mapper.MapToDocument(Base() with { CategoryHierarchy = null })
+            .CategoryPath.Should().BeEmpty();
+
+    [Fact]
+    public void Map_NullColorVariants_ReturnsEmptyArray()
+        => _mapper.MapToDocument(Base() with { ColorVariants = null })
+            .Color.Should().BeEmpty();
+
+    [Fact]
+    public void Map_NullSizeVariants_ReturnsEmptyArray()
+        => _mapper.MapToDocument(Base() with { SizeVariants = null })
+            .Size.Should().BeEmpty();
+
+    [Fact]
+    public void Map_NullProductName_ReturnsEmptyString()
+        => _mapper.MapToDocument(Base() with { ProductName = null })
+            .Title.Should().BeEmpty();
+
+    [Fact]
+    public void Map_NullDescription_ReturnsEmptyString()
+        => _mapper.MapToDocument(Base() with { ProductDescription = null })
+            .Description.Should().BeEmpty();
 }
