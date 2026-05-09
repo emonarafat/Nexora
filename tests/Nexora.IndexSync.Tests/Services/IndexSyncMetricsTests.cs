@@ -67,7 +67,7 @@ public class IndexSyncMetricsTests
     }
 
     [Fact]
-    public void SetLag_MultipleSourcesConcurrently_NoRaceCondition()
+    public async Task SetLag_MultipleSourcesConcurrently_NoRaceCondition()
     {
         var metrics = new IndexSyncMetrics();
         var tasks = Enumerable.Range(0, 20).Select(i => Task.Run(() =>
@@ -77,6 +77,6 @@ public class IndexSyncMetricsTests
         }));
 
         var act = async () => await Task.WhenAll(tasks);
-        act.Should().NotThrowAsync();
+        await act.Should().NotThrowAsync();
     }
 }
