@@ -7,6 +7,7 @@ using Nexora.SearchAPI.Features.Suggest;
 using Nexora.SearchAPI.Infrastructure;
 using Nexora.SearchAPI.Pipeline;
 using Nexora.SearchAPI.Ranking;
+using Nexora.SearchAPI.Security;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -57,13 +58,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.AddRateLimiter(o =>
+{
+    // Search endpoint: 60 req/min per API key (Phase 1.10 requirement)
     o.AddSlidingWindowLimiter("SearchLimit", l =>
     {
         l.Window = TimeSpan.FromMinutes(1);
         l.SegmentsPerWindow = 6;
-        l.PermitLimit = 1000;
+        l.PermitLimit = 60;
         l.QueueLimit = 0;
-    }));
+    });
+
+    // Suggest endpoint: 120 req/min per API key (Phase 1.10 requirement)
+    o.AddSlidingWindowLimiter("SuggestLimit", l =>
+    {
+        l.Window = TimeSpan.FromMinutes(1);
+        l.SegmentsPerWindow = 6;
+        l.PermitLimit = 120;
+        l.QueueLimit = 0;
+    });
+
+    // Admin operations: 30 req/min per user (Phase 1.10 requirement)
+    o.AddSlidingWindowLimiter("AdminLimit", l =>
+    {
+        l.Window = TimeSpan.FromMinutes(1);
+        l.SegmentsPerWindow = 6;
+        l.PermitLimit = 30;
+        l.QueueLimit = 0;
+    });
+});
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     ConnectionMultiplexer.Connect(
@@ -146,6 +168,16 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
+
+// API Key authentication middleware for public endpoints (Phase 1.10)
+// Skip in development environment if ApiKeys section is not configured
+var apiKeysConfigured = app.Configuration.GetSection("ApiKeys:ValidKeys").Exists() ||
+                        !string.IsNullOrWhiteSpace(app.Configuration["ApiKeys:ValidKeys:Csv"]);
+if (apiKeysConfigured || !app.Environment.IsDevelopment())
+{
+    app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -157,4 +189,4 @@ app.MapPrometheusScrapingEndpoint("/metrics");
 
 app.Run();
 
-//public partial class Program { }
+public partial class Program { }
