@@ -236,17 +236,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image
+        id: build
         run: |
           SERVICE_LOWER=$(echo "${{ matrix.service }}" | tr '[:upper:]' '[:lower:]')
           docker build \
             -f docker/Dockerfile.${{ matrix.service }} \
             -t nexora/${SERVICE_LOWER}:${{ github.sha }} \
             .
+          echo "service_lower=${SERVICE_LOWER}" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner (container image)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'nexora/${{ matrix.service }}:${{ github.sha }}'
+          image-ref: 'nexora/${{ steps.build.outputs.service_lower }}:${{ github.sha }}'
           format: 'sarif'
           output: 'trivy-image-${{ matrix.service }}.sarif'
           severity: 'CRITICAL,HIGH'
