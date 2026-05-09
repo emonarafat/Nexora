@@ -145,7 +145,7 @@ public class EnhancedInputValidationTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Error.Should().Contain("unsupported", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().Contain("unsupported");
     }
 
     [Theory]

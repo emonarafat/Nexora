@@ -16,7 +16,12 @@ public class ApiKeyAuthenticationMiddleware(RequestDelegate next, IConfiguration
         }
 
         // Skip authentication for Swagger in development
-        var env = context.RequestServices.GetService<IWebHostEnvironment>();
+        IWebHostEnvironment? env = null;
+        var serviceProvider = context.RequestServices;
+        if (serviceProvider != null)
+        {
+            env = serviceProvider.GetService<IWebHostEnvironment>();
+        }
         if (env?.IsDevelopment() == true &&
             (context.Request.Path.StartsWithSegments("/swagger") ||
              context.Request.Path.Value == "/"))
