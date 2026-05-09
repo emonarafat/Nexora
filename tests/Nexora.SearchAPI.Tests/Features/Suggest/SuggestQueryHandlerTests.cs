@@ -81,10 +81,10 @@ public class SuggestQueryHandlerTests
         var sut = CreateSut(cache, searchClient);
 
         var act = async () => await sut.HandleAsync(new SuggestRequest { Query = "running" }, CancellationToken.None);
-        var response = await act.Should().NotThrowAsync();
+        var response = (await act.Should().NotThrowAsync()).Which;
 
-        response.Subject.Suggestions.Should().BeEmpty();
-        response.Subject.CacheHit.Should().BeFalse();
+        response.Suggestions.Should().BeEmpty();
+        response.CacheHit.Should().BeFalse();
     }
 
     [Fact]
