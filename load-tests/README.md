@@ -141,7 +141,7 @@ The load test uses realistic query patterns:
    - **Target: < 0.1%**
 
 3. **Cache Efficiency:**
-   - Cache hit ratio via `X-Cache` header
+   - Cache hit ratio via `cacheHit` in the JSON response body (`SearchResponse`)
    - **Target: ≥ 40%**
 
 4. **Query Quality:**
