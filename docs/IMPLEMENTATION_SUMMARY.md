@@ -286,7 +286,7 @@ open load-test-results.html
 - `tests/Nexora.AdminAPI.Tests/Nexora.AdminAPI.Tests.csproj`
 - `tests/Nexora.SearchAPI.Tests/Integration/PostgreSqlIntegrationTestBase.cs`
 - `tests/Nexora.SearchAPI.Tests/Integration/SynonymExpanderIntegrationTests.cs`
-- `tests/Fixtures/ProductFixtures.cs`
+- `tests/Nexora.SearchAPI.Tests/Fixtures/ProductFixtures.cs`
 - `load-tests/search-load-test.js`
 - `load-tests/README.md`
 - `scripts/provision-test-env.sh`
