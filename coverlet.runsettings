@@ -2,13 +2,12 @@
 <RunSettings>
   <DataCollectionRunSettings>
     <DataCollectors>
-      <DataCollector friendlyName="XPlat code coverage">
+      <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
           <Format>opencover,cobertura,json</Format>
           <Exclude>[*.Tests]*,[*.Tests.Integration]*</Exclude>
           <ExcludeByFile>**/Program.cs,**/*.Designer.cs,**/*AssemblyInfo.cs</ExcludeByFile>
           <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
-          <IncludeDirectory>../src/**</IncludeDirectory>
           <SingleHit>false</SingleHit>
           <UseSourceLink>true</UseSourceLink>
           <IncludeTestAssembly>false</IncludeTestAssembly>

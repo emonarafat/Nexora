@@ -116,13 +116,11 @@ All existing unit tests validated and passing:
 - ✅ `coverlet.runsettings`: Coverage collection settings
   - Exclude test assemblies
   - Exclude generated code (Program.cs, AssemblyInfo.cs)
-  - Include src/** directories
   - Multi-format output (OpenCover, Cobertura, JSON)
 
-- ✅ `coverage.yml`: Coverage thresholds
-  - Line: ≥80%
-  - Branch: ≥70%
-  - Method: ≥75%
+- ✅ Coverage thresholds enforced in CI (`build.yml`):
+  - Line coverage ≥ 80% checked via `jq` parsing of `Summary.json`
+  - Build fails automatically when threshold is not met
 
 #### README Badges
 ```markdown

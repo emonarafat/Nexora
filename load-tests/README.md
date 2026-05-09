@@ -81,10 +81,9 @@ The test will automatically generate:
 
 ### Integration with Grafana
 
-```bash
-# Start local Grafana + InfluxDB
-docker-compose -f ../infra/docker-compose.monitoring.yml up -d
+To visualise k6 metrics in Grafana, start a local InfluxDB + Grafana stack first (e.g. using the official [k6 docker-compose example](https://github.com/grafana/k6/tree/master/examples/docker-compose)), then run:
 
+```bash
 # Run test with InfluxDB output
 k6 run --out influxdb=http://localhost:8086/k6 search-load-test.js
 

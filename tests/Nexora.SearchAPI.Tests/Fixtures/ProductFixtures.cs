@@ -1,6 +1,6 @@
 using Nexora.Shared.DTOs;
 
-namespace Nexora.Tests.Fixtures;
+namespace Nexora.SearchAPI.Tests.Fixtures;
 
 /// <summary>
 /// Test data fixtures for Phase 1.7 integration tests.
@@ -8,7 +8,9 @@ namespace Nexora.Tests.Fixtures;
 /// </summary>
 public static class ProductFixtures
 {
-    private static readonly Random Random = new(42); // Deterministic seed
+    // Use a fixed-seed Random protected by a lock so generation is deterministic and thread-safe.
+    private static readonly Random SeededRandom = new(42);
+    private static readonly object RandomLock = new();
 
     private static readonly string[] Brands = [
         "Nike", "Adidas", "Puma", "Reebok", "Under Armour",
@@ -62,29 +64,27 @@ public static class ProductFixtures
                 Description = GenerateDescription(title, brand, category),
                 Brand = brand,
                 Category = category,
-                SubCategory = GenerateSubCategory(category),
-                Price = Math.Round(10 + Random.NextDouble() * 990, 2),
-                OriginalPrice = Math.Round(15 + Random.NextDouble() * 1000, 2),
+                CategoryPath = [category, GenerateSubCategory(category)],
+                Price = (float)Math.Round(10 + NextDouble() * 990, 2),
                 Currency = "USD",
                 StockStatus = RandomChoice(StockStatuses),
-                QuantityAvailable = GenerateQuantity(),
-                Rating = Math.Round(2.0 + Random.NextDouble() * 3.0, 1), // 2.0 - 5.0
-                RatingCount = Random.Next(0, 1000),
-                IsFeatured = Random.NextDouble() < 0.05, // 5% featured
-                IsActive = Random.NextDouble() < 0.95, // 95% active
-                ImageUrl = $"https://cdn.nexora.com/products/{i:D5}.jpg",
-                Tags = GenerateTags(category, brand),
-                Color = RandomChoice(Colors),
-                Sizes = GenerateSizes(category),
-                PopularityScore = Math.Round(Random.NextDouble(), 3),
-                CreatedAt = DateTimeOffset.UtcNow.AddDays(-Random.Next(1, 365)).ToUnixTimeSeconds(),
-                UpdatedAt = DateTimeOffset.UtcNow.AddDays(-Random.Next(0, 30)).ToUnixTimeSeconds(),
-                SeoKeywords = $"{title.ToLower()}, {brand.ToLower()}, {category.ToLower()}"
+                StockQuantity = NextInt(0, 200),
+                Rating = (float)Math.Round(2.0 + NextDouble() * 3.0, 1), // 2.0 - 5.0
+                RatingCount = NextInt(0, 1000),
+                IsFeatured = NextDouble() < 0.05, // 5% featured
+                IsActive = NextDouble() < 0.95, // 95% active
+                Color = [RandomChoice(Colors)],
+                Size = GenerateSizes(category),
+                PopularityScore = (float)Math.Round(NextDouble(), 3),
+                CreatedAt = DateTimeOffset.UtcNow.AddDays(-NextInt(1, 365)).ToUnixTimeSeconds(),
+                UpdatedAt = DateTimeOffset.UtcNow.AddDays(-NextInt(0, 30)).ToUnixTimeSeconds()
             });
         }
 
         return products;
     }
+
+    private const float DefaultQueryProductPrice = 99.99f;
 
     /// <summary>
     /// Generates a subset of products matching specific query expectations
@@ -97,6 +97,7 @@ public static class ProductFixtures
 
         if (expectation == default) return [];
 
+        var category = InferCategory(query);
         return expectation.Products.Select((title, idx) => new ProductDocument
         {
             Id = $"QUERY-PROD-{idx:D3}",
@@ -104,12 +105,18 @@ public static class ProductFixtures
             Title = title,
             Description = $"High-quality {title} for {query}",
             Brand = ExtractBrand(title),
-            Category = InferCategory(query),
-            Price = 99.99,
+            Category = category,
+            CategoryPath = [category],
+            Price = DefaultQueryProductPrice,
+            Currency = "USD",
             StockStatus = "in_stock",
+            StockQuantity = 50,
             Rating = 4.5f,
             RatingCount = 100,
+            IsFeatured = false,
             IsActive = true,
+            Color = [],
+            Size = [],
             PopularityScore = 0.9f,
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
@@ -150,36 +157,32 @@ public static class ProductFixtures
         };
     }
 
-    private static int GenerateQuantity()
-    {
-        return Random.Next(0, 200);
-    }
-
-    private static string[] GenerateTags(string category, string brand)
-    {
-        var tags = new List<string> { category.ToLower(), brand.ToLower() };
-
-        if (Random.NextDouble() < 0.3) tags.Add("bestseller");
-        if (Random.NextDouble() < 0.2) tags.Add("new arrival");
-        if (Random.NextDouble() < 0.15) tags.Add("sale");
-        if (Random.NextDouble() < 0.1) tags.Add("limited edition");
-
-        return tags.ToArray();
-    }
-
     private static string[] GenerateSizes(string category)
     {
         return category switch
         {
-            "Footwear" => new[] { "7", "8", "9", "10", "11", "12" },
-            "Clothing" => new[] { "XS", "S", "M", "L", "XL", "XXL" },
+            "Footwear" => ["7", "8", "9", "10", "11", "12"],
+            "Clothing" => ["XS", "S", "M", "L", "XL", "XXL"],
             _ => []
         };
     }
 
     private static T RandomChoice<T>(T[] items)
     {
-        return items[Random.Next(items.Length)];
+        lock (RandomLock)
+        {
+            return items[SeededRandom.Next(items.Length)];
+        }
+    }
+
+    private static double NextDouble()
+    {
+        lock (RandomLock) { return SeededRandom.NextDouble(); }
+    }
+
+    private static int NextInt(int minValue, int maxValue)
+    {
+        lock (RandomLock) { return SeededRandom.Next(minValue, maxValue); }
     }
 
     private static string ExtractBrand(string title)

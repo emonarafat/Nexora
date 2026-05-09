@@ -98,10 +98,12 @@ cleanup_test_env() {
   exit 0
 }
 
-# Status check function
+# Status check function – runs with errexit disabled so all services are reported
 check_status() {
   print_header "Test Environment Status"
 
+  # Disable errexit temporarily so we get a full report even if services are down
+  set +e
   check_service "PostgreSQL" $POSTGRES_PORT
   check_service "MSSQL Server" $MSSQL_PORT
   check_service "Typesense" $TYPESENSE_PORT
@@ -111,6 +113,7 @@ check_status() {
     check_service "RabbitMQ" $RABBITMQ_PORT
     check_service "RabbitMQ Management" $RABBITMQ_MGMT_PORT
   fi
+  set -e
 
   echo ""
   echo "Docker containers:"
@@ -293,23 +296,24 @@ CREATE TABLE IF NOT EXISTS search_synonyms (
     id SERIAL PRIMARY KEY,
     term VARCHAR(255) NOT NULL,
     synonyms TEXT[] NOT NULL,
-    locale VARCHAR(10) DEFAULT 'en-US',
+    locale VARCHAR(10) NOT NULL DEFAULT 'en-US',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN DEFAULT TRUE,
+    CONSTRAINT uq_search_synonyms_term_locale UNIQUE (term, locale)
 );
 
 CREATE INDEX IF NOT EXISTS idx_search_synonyms_term ON search_synonyms(term);
 CREATE INDEX IF NOT EXISTS idx_search_synonyms_locale ON search_synonyms(locale);
 
--- Seed test synonyms
+-- Seed test synonyms (idempotent via unique constraint)
 INSERT INTO search_synonyms (term, synonyms, is_active) VALUES
     ('couch', ARRAY['sofa', 'settee', 'divan'], TRUE),
     ('tv', ARRAY['television', 'telly'], TRUE),
     ('laptop', ARRAY['notebook', 'portable computer'], TRUE),
     ('sneakers', ARRAY['trainers', 'kicks', 'tennis shoes'], TRUE),
     ('phone', ARRAY['smartphone', 'mobile', 'cell phone'], TRUE)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (term, locale) DO NOTHING;
 EOF
 
 echo -e "${GREEN}✓${NC} PostgreSQL schema created and seeded"
@@ -317,6 +321,7 @@ echo -e "${GREEN}✓${NC} PostgreSQL schema created and seeded"
 # Step 5: Verify environment
 print_header "Step 5: Verifying Test Environment"
 
+set +e
 check_service "PostgreSQL" $POSTGRES_PORT
 check_service "MSSQL Server" $MSSQL_PORT
 check_service "Typesense" $TYPESENSE_PORT
@@ -325,6 +330,7 @@ check_service "Valkey" $VALKEY_PORT
 if [ "$WITH_LOAD_TEST" = true ]; then
   check_service "RabbitMQ" $RABBITMQ_PORT
 fi
+set -e
 
 # Step 6: Display connection info
 print_header "Test Environment Ready!"

@@ -145,8 +145,8 @@ This document tracks the acceptance criteria for Phase 1.7 Testing implementatio
   - [x] coverage.yml
   - [x] Updated .github/workflows/build.yml
 
-- [ ] **Documentation**
-  - [ ] Test environment provisioning script
+- [x] **Documentation**
+  - [x] Test environment provisioning script (`scripts/provision-test-env.sh`)
   - [ ] Performance baseline document
   - [ ] Testing best practices guide
   - [ ] README updates (coverage badge)
