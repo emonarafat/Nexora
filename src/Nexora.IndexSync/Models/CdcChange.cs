@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nexora.IndexSync.Models;
 
+[ExcludeFromCodeCoverage]
 public record CdcChange
 {
     public string Operation { get; init; } = "UPDATE";

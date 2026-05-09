@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nexora.Shared.DTOs;
 
+[ExcludeFromCodeCoverage]
 public record SearchRequest
 {
     public string Query { get; init; } = string.Empty;

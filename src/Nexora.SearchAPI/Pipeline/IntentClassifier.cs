@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 namespace Nexora.SearchAPI.Pipeline;
 
 public enum SearchIntent { Transactional, Navigational, CategoryFiltered }
 
+[ExcludeFromCodeCoverage]
 public record ClassifiedIntent(SearchIntent Intent, Dictionary<string, string>? Filters = null);
 
 public sealed partial class IntentClassifier

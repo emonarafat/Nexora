@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nexora.Shared.DTOs;
 
+[ExcludeFromCodeCoverage]
 public record SearchResponse
 {
     public IReadOnlyList<ProductResult> Results { get; init; } = [];
@@ -13,6 +16,7 @@ public record SearchResponse
     public bool CacheHit { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 public record ProductResult
 {
     public string Id { get; init; } = string.Empty;
@@ -30,6 +34,7 @@ public record ProductResult
     public double FinalScore { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 public record FacetValue
 {
     public string Value { get; init; } = string.Empty;

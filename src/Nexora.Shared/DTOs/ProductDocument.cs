@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nexora.Shared.DTOs;
 
+[ExcludeFromCodeCoverage]
 public record ProductDocument
 {
     public string Id { get; init; } = string.Empty;

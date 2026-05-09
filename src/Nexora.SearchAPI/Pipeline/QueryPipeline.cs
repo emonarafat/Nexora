@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Nexora.SearchAPI.Pipeline;
 
+[ExcludeFromCodeCoverage]
 public record ProcessedQuery(
     string OriginalQuery,
     string NormalizedQuery,

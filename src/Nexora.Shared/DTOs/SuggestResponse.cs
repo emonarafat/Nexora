@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nexora.Shared.DTOs;
 
+[ExcludeFromCodeCoverage]
 public record SuggestResponse
 {
     public IReadOnlyList<SuggestionItem> Suggestions { get; init; } = [];
@@ -7,6 +10,7 @@ public record SuggestResponse
     public bool CacheHit { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 public record SuggestionItem
 {
     public string Text { get; init; } = string.Empty;

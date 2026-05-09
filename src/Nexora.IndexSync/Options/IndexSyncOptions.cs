@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nexora.IndexSync.Options;
 
+[ExcludeFromCodeCoverage]
 public sealed class IndexSyncOptions
 {
     public const string SectionName = "IndexSync";

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Nexora.AdminAPI.Features.Synonyms;
 
@@ -55,5 +56,7 @@ public static class SynonymEndpoints
     }
 }
 
+[ExcludeFromCodeCoverage]
 public record SynonymEntry(string Term, string[] Synonyms, bool IsActive, DateTime CreatedAt);
+[ExcludeFromCodeCoverage]
 public record CreateSynonymRequest(string Term, string[] Synonyms);
