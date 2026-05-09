@@ -47,7 +47,48 @@ jobs:
             -c Release \
             --verbosity normal \
             --results-directory ./test-results \
-            --logger "trx;LogFileName=results.trx"
+            --logger "trx;LogFileName=results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --settings coverlet.runsettings \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Generate Coverage Report
+        if: always()
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:**/coverage.opencover.xml \
+            -targetdir:coverage-report \
+            -reporttypes:"Html;Cobertura;JsonSummary"
+
+      - name: Check Coverage Thresholds
+        if: always()
+        run: |
+          # Parse coverage from JSON summary
+          COVERAGE=$(cat coverage-report/Summary.json | grep -oP '"linecoverage":\s*"\K[0-9.]+')
+          echo "Code Coverage: ${COVERAGE}%"
+
+          # Fail if coverage < 80%
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ Coverage $COVERAGE% is below 80% threshold"
+            exit 1
+          else
+            echo "✅ Coverage $COVERAGE% meets 80% threshold"
+          fi
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage-report
+          retention-days: 30
+
+      - name: Comment Coverage on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          path: coverage-report/Summary.md
 
       - name: Publish Test Report
         uses: dorny/test-reporter@v1

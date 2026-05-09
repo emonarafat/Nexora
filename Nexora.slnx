@@ -6,6 +6,7 @@
     <Project Path="src/Nexora.Shared/Nexora.Shared.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Nexora.AdminAPI.Tests/Nexora.AdminAPI.Tests.csproj" />
     <Project Path="tests/Nexora.IndexSync.Tests/Nexora.IndexSync.Tests.csproj" />
     <Project Path="tests/Nexora.SearchAPI.Tests/Nexora.SearchAPI.Tests.csproj" />
   </Folder>

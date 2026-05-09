@@ -1,0 +1,33 @@
+# Nexora Code Coverage Configuration
+# Uses coverlet for coverage collection and ReportGenerator for HTML reports
+
+# Coverage Thresholds (Phase 1.7 Requirements)
+coverage:
+  line: 80
+  branch: 70
+  method: 75
+
+# Exclude patterns
+exclude:
+  - "**/Program.cs"
+  - "**/GlobalUsings.g.cs"
+  - "**/*AssemblyInfo.cs"
+  - "**/Migrations/**"
+  - "**/*.Designer.cs"
+
+# Include patterns (explicitly include all production code)
+include:
+  - "src/Nexora.SearchAPI/**"
+  - "src/Nexora.AdminAPI/**"
+  - "src/Nexora.IndexSync/**"
+  - "src/Nexora.Shared/**"
+
+# Report formats
+formats:
+  - cobertura
+  - html
+  - json
+  - lcov
+
+# Output directory
+output: coverage-reports
