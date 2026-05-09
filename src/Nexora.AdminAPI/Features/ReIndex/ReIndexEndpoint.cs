@@ -6,7 +6,8 @@ public static class ReIndexEndpoints
     {
         app.MapPost("/api/v1/admin/reindex", Trigger)
             .WithSummary("Trigger full re-index")
-            .WithTags("Admin");
+            .WithTags("Admin")
+            .RequireRateLimiting("AdminLimit");
         return app;
     }
 

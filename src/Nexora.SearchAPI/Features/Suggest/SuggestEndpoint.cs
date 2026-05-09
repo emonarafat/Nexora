@@ -14,14 +14,17 @@ public static class SuggestEndpoints
             .WithDescription("Returns autocomplete suggestions for query prefixes. Frontend callers should debounce requests to 300ms.")
             .WithTags("Suggest")
             .Produces<IReadOnlyList<SuggestionItem>>()
-            .ProducesProblem(400);
+            .ProducesProblem(400)
+            .ProducesProblem(429)
+            .RequireRateLimiting("SuggestLimit");
 
         app.MapPost("/api/v1/suggest/cache/invalidate", InvalidateAsync)
             .WithName("InvalidateSuggestCache")
             .WithSummary("Invalidate suggest cache")
             .WithDescription("Invalidates suggest cache after product index updates.")
             .WithTags("Suggest")
-            .Produces(StatusCodes.Status204NoContent);
+            .Produces(StatusCodes.Status204NoContent)
+            .RequireRateLimiting("AdminLimit");
 
         return app;
     }
