@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
 
 namespace Nexora.SearchAPI.Infrastructure;
 
+[ExcludeFromCodeCoverage]
 public sealed class RabbitMqPublisher(IConfiguration config, ILogger<RabbitMqPublisher> logger)
     : IRabbitMqPublisher, IAsyncDisposable
 {

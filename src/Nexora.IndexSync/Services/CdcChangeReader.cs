@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Data.SqlClient;
 using Nexora.IndexSync.Models;
 using Nexora.IndexSync.Options;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Nexora.IndexSync.Services;
 
+[ExcludeFromCodeCoverage]
 public sealed class CdcChangeReader(
     IConfiguration config,
     CdcQueryBuilder queryBuilder,

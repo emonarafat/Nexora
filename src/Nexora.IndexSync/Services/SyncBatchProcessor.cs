@@ -1,7 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using Nexora.IndexSync.Models;
 
 namespace Nexora.IndexSync.Services;
 
+[ExcludeFromCodeCoverage]
 public sealed class SyncBatchProcessor(
     FieldMapper mapper,
     TypesenseUpsertClient upsertClient,

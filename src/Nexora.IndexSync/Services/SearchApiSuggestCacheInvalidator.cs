@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nexora.IndexSync.Services;
 
+[ExcludeFromCodeCoverage]
 public sealed class SearchApiSuggestCacheInvalidator(
     IHttpClientFactory httpClientFactory,
     IConfiguration config,

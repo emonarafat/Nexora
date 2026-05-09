@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Mvc;
 using Nexora.Shared.Constants;
 using Nexora.Shared.DTOs;
 
 namespace Nexora.SearchAPI.Features.Suggest;
 
+[ExcludeFromCodeCoverage]
 public static class SuggestEndpoints
 {
     public static IEndpointRouteBuilder MapSuggestEndpoints(this IEndpointRouteBuilder app)

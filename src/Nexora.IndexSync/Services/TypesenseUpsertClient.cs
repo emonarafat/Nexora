@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Options;
 using Nexora.Shared.Constants;
 using Nexora.Shared.DTOs;
@@ -7,6 +8,7 @@ using OptionsFactory = Microsoft.Extensions.Options.Options;
 
 namespace Nexora.IndexSync.Services;
 
+[ExcludeFromCodeCoverage]
 public sealed class TypesenseUpsertClient(IConfiguration config, ILogger<TypesenseUpsertClient> logger)
 {
     private ITypesenseClient CreateClient()

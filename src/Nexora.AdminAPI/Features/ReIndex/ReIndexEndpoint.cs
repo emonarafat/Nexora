@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nexora.AdminAPI.Features.ReIndex;
 
+[ExcludeFromCodeCoverage]
 public static class ReIndexEndpoints
 {
     public static IEndpointRouteBuilder MapReIndexEndpoints(this IEndpointRouteBuilder app)

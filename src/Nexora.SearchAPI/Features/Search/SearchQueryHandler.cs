@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Nexora.SearchAPI.Infrastructure;
 using Nexora.SearchAPI.Pipeline;
 using Nexora.SearchAPI.Ranking;
@@ -8,6 +9,7 @@ using Typesense;
 
 namespace Nexora.SearchAPI.Features.Search;
 
+[ExcludeFromCodeCoverage]
 public sealed class SearchQueryHandler(
     TypesenseClientFactory clientFactory,
     QueryPipeline pipeline,

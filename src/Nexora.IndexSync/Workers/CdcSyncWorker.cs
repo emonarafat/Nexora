@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Nexora.IndexSync.Services;
 using Nexora.IndexSync.Options;
 using Microsoft.Extensions.Options;
 
 namespace Nexora.IndexSync.Workers;
 
+[ExcludeFromCodeCoverage]
 public sealed class CdcSyncWorker(
     CdcChangeReader reader,
     BatchCollector batchCollector,

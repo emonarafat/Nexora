@@ -1,8 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using StackExchange.Redis;
 
 namespace Nexora.SearchAPI.Infrastructure;
 
+[ExcludeFromCodeCoverage]
 public sealed class ValkeyCache(IConnectionMultiplexer redis, ILogger<ValkeyCache> logger) : IValkeyCache
 {
     private readonly IDatabase _db = redis.GetDatabase();

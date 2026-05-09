@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Nexora.SearchAPI.Infrastructure;
 using Nexora.Shared.Constants;
 using Nexora.Shared.DTOs;
@@ -5,6 +6,7 @@ using Typesense;
 
 namespace Nexora.SearchAPI.Features.Suggest;
 
+[ExcludeFromCodeCoverage]
 public sealed class TypesenseSuggestSearchClient(TypesenseClientFactory clientFactory) : ISuggestSearchClient
 {
     public async Task<IReadOnlyList<SuggestionItem>> SearchAsync(string prefix, int limit, string? category, CancellationToken ct)

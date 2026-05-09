@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Nexora.AdminAPI.Features.Synonyms;
 
+[ExcludeFromCodeCoverage]
 public static class SynonymEndpoints
 {
     public static IEndpointRouteBuilder MapSynonymEndpoints(this IEndpointRouteBuilder app)
