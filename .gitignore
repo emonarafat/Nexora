@@ -63,6 +63,8 @@ lerna-debug.log*
 # Test / Coverage
 # -------------------------
 coverage/
+coverage-report/
+coverage-reports/
 TestResults/
 test-results/
 *.trx
@@ -70,6 +72,12 @@ test-results/
 *.coveragexml
 *.lcov
 .nyc_output/
+
+# Load test results
+load-tests/*.json
+load-tests/*.html
+!load-tests/README.md
+!load-tests/search-load-test.js
 
 # -------------------------
 # Environment / Secrets

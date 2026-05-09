@@ -1,5 +1,9 @@
 # Nexora — Enterprise Search & Discovery System
 
+[![Build and Test](https://github.com/emonarafat/Nexora/actions/workflows/build.yml/badge.svg)](https://github.com/emonarafat/Nexora/actions/workflows/build.yml)
+[![Code Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)](./coverage-report/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
 **An intelligent, scalable, and adaptive search system for e-commerce marketplaces.**
 
 Nexora delivers sub-100ms query latency, semantic understanding, typo tolerance, and real-time ranking optimization—built on **Typesense**, **.NET 10**, **Valkey**, **RabbitMQ**, **MSSQL Server**, and deployed on **AWS EKS**.
